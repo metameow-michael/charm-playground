@@ -246,7 +246,7 @@ const ART={
       g.strokeStyle="rgba(36,30,40,.35)";g.lineWidth=4;g.stroke();});},
 };
 const ART_KEYS=Object.keys(ART);
-const S={caseI:0,shapeI:0,mat:0,color:1,strand:0,art:4,hook:1,hookColor:1,bg:2,tilt:false};
+const S={caseI:0,shapeI:1,mat:0,color:1,strand:0,art:4,hook:1,hookColor:1,bg:2,tilt:false};
 function SH(){return SHAPES[S.shapeI];}
 function MT(){return MATERIALS[S.mat];}
 function ST(){return STRANDS[S.strand];}
@@ -1013,7 +1013,7 @@ function syncMeshes(dt){
    INPUT — drag rotates, two fingers / shift / right-drag translates
    =================================================================== */
 let yaw=0,pitch=0,yawV=0,pitchV=0;
-const tiltQuat=new Q(),tiltOffset=new Q(),tiltCorrection=new Q(-Math.SQRT1_2,0,0,Math.SQRT1_2);
+const tiltQuat=new Q(),tiltCorrection=new Q(-Math.SQRT1_2,0,0,Math.SQRT1_2);
 const tiltScreenQuat=new Q(),tiltEuler=new THREE.Euler(),tiltZee=new V3(0,0,1);
 let tiltReady=false,tiltListening=false;
 let zoom=1,pinchStart=0,pinchZoom=1;
@@ -1127,7 +1127,7 @@ function startTilt(){
     const screenAngle=((screen.orientation&&screen.orientation.angle)||window.orientation||0)*Math.PI/180;
     tiltScreenQuat.setFromAxisAngle(tiltZee,-screenAngle);
     tiltQuat.multiply(tiltScreenQuat);
-    if(!tiltReady){tiltOffset.copy(tiltQuat).invert();tiltReady=true;}
+    tiltReady=true;
     _g.set(g*GRAVITY*.75,-GRAVITY*Math.sqrt(Math.max(.15,1-g*g*.5)),b*GRAVITY*.30);
   },true);
 }
@@ -1306,7 +1306,7 @@ function frame(now){
   prevPhonePos.copy(phone.position);prevPhoneQ.copy(phone.quaternion);
   phone.position.lerp(phoneTarget,1-Math.pow(0.0008,dt));
   dragE.set(pitch,yaw,0,"YXZ");dragQ.setFromEuler(dragE);
-  if(S.tilt&&tiltReady)wantQ.copy(tiltQuat).multiply(tiltOffset).multiply(baseQuat);
+  if(S.tilt&&tiltReady)wantQ.copy(tiltQuat);
   else wantQ.copy(dragQ).multiply(baseQuat);
   phone.quaternion.slerp(wantQ,1-Math.pow(0.00004,dt));
 
