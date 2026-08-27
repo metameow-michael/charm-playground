@@ -177,8 +177,8 @@ const COLORS=[
   {n:"Butter",hex:0xFFDD86},{n:"Lilac",hex:0xC4B2FF},{n:"Milk",hex:0xF6EBDD},
 ];
 const BG_COLORS=[
-  {n:"Pearl",hex:0xE7E7EC},{n:"Silver",hex:0xC5C7D0},{n:"Chrome",hex:0x9B9EAA},
-  {n:"Smoke",hex:0x777B88},{n:"Blue gray",hex:0x252832},
+  {n:"Pearl",hex:0xB1B2B8},{n:"Silver",hex:0x94969E},{n:"Chrome",hex:0x737580},
+  {n:"Smoke",hex:0x575A63},{n:"Blue gray",hex:0x181A20},
 ];
 const HOOKS=[
   {n:"Ring",ko:"링",k:"ring"},{n:"Heart",ko:"하트",k:"heart"},
@@ -431,7 +431,7 @@ const CAM_X=-PH.w/2+.235, CAM_Y=PH.h/2-.255;
 const HOOK_Z=-PH.cd/2-.018;
 const HOOK_DEFAULT=new V3(CAM_X+.22,CAM_Y-.25,HOOK_Z);
 const phone=new THREE.Group();scene.add(phone);
-const baseQuat=new Q().setFromEuler(new THREE.Euler(0.16,-2.40,0.11,"YXZ"));
+const baseQuat=new Q().setFromEuler(new THREE.Euler(-0.38,-2.40,0.11,"YXZ"));
 phone.quaternion.copy(baseQuat);
 
 const bodyMesh=new THREE.Mesh(extrude(roundRectShape(PH.w,PH.h,.155),PH.d,.016),
@@ -505,23 +505,33 @@ const caseRim=new THREE.Mesh(caseRimGeometry(),caseMat);
 caseRim.castShadow=true;caseRim.renderOrder=3;phone.add(caseRim);
 
 let loop=null;
+let hookShackle=null;
 const hookMaterial=matSilver.clone();
 const attachmentLocal=new V3().copy(HOOK_DEFAULT);
 const ANCHOR_LOCAL=new V3().copy(attachmentLocal);
 function updateAttachment(){
   if(!loop)return;
   loop.position.copy(attachmentLocal);
+  hookShackle.position.copy(attachmentLocal);
   ANCHOR_LOCAL.copy(attachmentLocal);
 }
 function buildHook(){
   if(loop)phone.remove(loop);
+  if(hookShackle)phone.remove(hookShackle);
   const kind=HOOKS[S.hook].k;
   if(kind==="heart") loop=new THREE.Mesh(extrude(heartShape(.11),.030,.009,20),hookMaterial);
   else if(kind==="sakura") loop=new THREE.Mesh(extrude(sakuraShape(.105,5),.030,.009,20),hookMaterial);
   else loop=new THREE.Mesh(new THREE.TorusGeometry(.044,.014,10,26),hookMaterial);
   loop.castShadow=true;
   if(kind==="ring")loop.rotation.y=Math.PI/2;
+  const hookPath=new THREE.CatmullRomCurve3([
+    new V3(-.036,.018,-.045),new V3(-.036,-.032,-.045),new V3(-.018,-.060,-.045),
+    new V3(.018,-.060,-.045),new V3(.036,-.032,-.045),new V3(.036,.018,-.045)
+  ],true);
+  hookShackle=new THREE.Mesh(new THREE.TubeGeometry(hookPath,24,.012,8,true),hookMaterial);
+  hookShackle.castShadow=true;
   phone.add(loop);updateAttachment();
+  phone.add(hookShackle);
 }
 function applyHookLook(){
   hookMaterial.color.setHex(COLORS[S.hookColor].hex);
@@ -650,11 +660,14 @@ function rebuildInertia(){
 /* contact sample points on the pendant, body-local */
 let SAMPLES=[];
 function rebuildSamples(){
-  const w=CH.w*.44,h=CH.h*.46,d=CH.d*.5;
+  const w=CH.w*.49,h=CH.h*.49,d=CH.d*.5;
   SAMPLES=[];
-  [-1,1].forEach(function(sx){[-1,1].forEach(function(sy){[-1,1].forEach(function(sz){
-    SAMPLES.push(new V3(sx*w,sy*h,sz*d));});});});
-  SAMPLES.push(new V3(0,0,d),new V3(0,0,-d),new V3(0,h,0),new V3(0,-h,0));
+  const levels=[-1,0,1];
+  [ -1,1 ].forEach(function(side){
+    levels.forEach(function(y){levels.forEach(function(z){SAMPLES.push(new V3(side*w,y*h,z*d));});});
+    levels.forEach(function(x){levels.forEach(function(z){SAMPLES.push(new V3(x*w,side*h,z*d));});});
+    levels.forEach(function(x){levels.forEach(function(y){SAMPLES.push(new V3(x*w,y*h,side*d));});});
+  });
 }
 rebuildSamples();
 
@@ -799,7 +812,7 @@ function substep(h,alpha){
     for(let s=0;s<SAMPLES.length;s++){
       _rA.copy(SAMPLES[s]).applyQuaternion(pend.q);
       _wp.copy(pend.x).add(_rA);
-      const depth=boxResolve(_wp,.006,_n);
+      const depth=boxResolve(_wp,.009,_n);
       if(depth>0){
         pointVel(pend,_rA,_pv);
         phonePointVel(_wp,_t);_rel.subVectors(_pv,_t);
@@ -1000,8 +1013,9 @@ function syncMeshes(dt){
    INPUT — drag rotates, two fingers / shift / right-drag translates
    =================================================================== */
 let yaw=0,pitch=0,yawV=0,pitchV=0;
+let tiltYaw=0,tiltPitch=0;
 let zoom=1,pinchStart=0,pinchZoom=1;
-const phoneTarget=new V3(.34,.04,0);
+const phoneTarget=new V3(0,.04,0);
 phone.position.copy(phoneTarget);
 const pointers=new Map();
 let mode=null, lastX=0, lastY=0, panStart=new V3(), panOrigin=new V3();
@@ -1087,11 +1101,11 @@ function endPointer(e){
   pointers.delete(e.pointerId);
   if(pointers.size===0) mode=null;
 }
-["pointerup","pointercancel","pointerleave"].forEach(function(t){
+["pointerup","pointercancel"].forEach(function(t){
   canvas.addEventListener(t,endPointer);});
 
 document.getElementById("reset").addEventListener("click",function(){
-  yaw=0;pitch=0;yawV=0;pitchV=0;setZoom(1);phoneTarget.set(.34,.04,0);
+  yaw=0;pitch=0;yawV=0;pitchV=0;setZoom(1);phoneTarget.set(0,.04,0);
   attachmentLocal.copy(HOOK_DEFAULT);updateAttachment();
 });
 
@@ -1103,19 +1117,20 @@ function startTilt(){
   window.addEventListener("deviceorientation",function(ev){
     if(!S.tilt)return;
     const g=MU.clamp((ev.gamma||0)/45,-1,1), b=MU.clamp(((ev.beta||0)-40)/60,-1,1);
+    tiltYaw=g*.92;tiltPitch=b*.72;
     _g.set(g*GRAVITY*.75,-GRAVITY*Math.sqrt(Math.max(.15,1-g*g*.5)),b*GRAVITY*.30);
   },true);
 }
 tiltBtn.addEventListener("click",function(){
-  if(S.tilt){S.tilt=false;_g.set(0,-GRAVITY,0);tiltBtn.textContent="Tilt on";return;}
+  if(S.tilt){S.tilt=false;tiltYaw=0;tiltPitch=0;_g.set(0,-GRAVITY,0);tiltBtn.textContent="Tilt on";return;}
   if(needsPerm){
     DeviceOrientationEvent.requestPermission().then(function(r){
       if(r!=="granted")return;
-      S.tilt=true;startTilt();tiltBtn.textContent="Tilt off";hintEl.classList.add("gone");
+      S.tilt=true;intro=false;startTilt();tiltBtn.textContent="Tilt off";hintEl.classList.add("gone");
     })["catch"](function(){});
     return;
   }
-  S.tilt=true;startTilt();tiltBtn.textContent="Tilt off";hintEl.classList.add("gone");
+  S.tilt=true;intro=false;startTilt();tiltBtn.textContent="Tilt off";hintEl.classList.add("gone");
 });
 
 /* ===================================================================
@@ -1223,16 +1238,29 @@ function resize(){
   const w=innerWidth,h=innerHeight;
   renderer.setSize(w,h,false);camera.aspect=w/h;
   camera.position.set(0,.05,0);setZoom(zoom);
-  camera.updateProjectionMatrix();camera.lookAt(0,-.55,0);
+  camera.updateProjectionMatrix();camera.lookAt(0,0,0);
 }
 addEventListener("resize",resize);resize();
 applyCase();applyBackground();buildPendant();buildStrand();redrawArt();applyLook();paint();
 
-// place the pendant under the strand so it does not start inside the phone
-pend.x.set(0,.8-NLINK*LINKLEN-(CH.h/2+CH.ringGap),0);
+// Start the strand below and slightly away from the rear hook.
+const startAnchor=new V3().copy(ANCHOR_LOCAL).applyQuaternion(phone.quaternion).add(phone.position);
+const startOutward=new V3(0,0,-1).applyQuaternion(phone.quaternion);
+const startHang=new V3(0,-1,0).addScaledVector(startOutward,.9).normalize();
+for(let i=0;i<NLINK;i++){
+  P[i].p.copy(startAnchor).addScaledVector(startHang,i*LINKLEN);
+  P[i].pr.copy(P[i].p);P[i].v.set(0,0,0);
+}
+_rA.copy(ANCH_L).applyQuaternion(pend.q);
+pend.x.copy(P[NLINK-1].p).sub(_rA);pend.v.set(0,0,0);pend.w.set(0,0,0);
+pend.xp.copy(pend.x);pend.qp.copy(pend.q);
 phPosA.copy(phone.position);phPosB.copy(phone.position);
 phQuatA.copy(phone.quaternion);phQuatB.copy(phone.quaternion);
 for(let i=0;i<150;i++) stepPhysics(1/60);
+for(let i=0;i<P.length;i++){
+  P[i].v.set(0,0,0);P[i].pr.copy(P[i].p);
+}
+pend.v.set(0,0,0);pend.w.set(0,0,0);pend.xp.copy(pend.x);pend.qp.copy(pend.q);
 
 const dragQ=new Q(),dragE=new THREE.Euler(),wantQ=new Q();
 const prevPhonePos=new V3().copy(phone.position),prevPhoneQ=new Q().copy(phone.quaternion);
@@ -1244,8 +1272,15 @@ function frame(now){
   const t=(now-t0)/1000;
 
   if(intro){
-    yaw = Math.sin(t*2.2)*0.75*Math.max(0,1-t/3.0);
-    if(t>3.1) intro=false;
+    const introFade=Math.max(0,1-t/5.5);
+    yaw = Math.sin(t*1.65)*0.82*introFade;
+    pitch = Math.sin(t*1.1)*0.14*introFade;
+    phoneTarget.y=.04+Math.sin(t*1.8)*.030*introFade;
+    if(t>5.6) intro=false;
+  } else if(S.tilt&&mode===null){
+    yaw += (tiltYaw-yaw)*(1-Math.pow(.0004,dt));
+    pitch += (tiltPitch-pitch)*(1-Math.pow(.0004,dt));
+    yawV=0;pitchV=0;
   } else if(mode!=="spin"){
     // flick momentum, then a slow settle back toward the hero pose
     yaw   += yawV*dt;   yawV   *= Math.pow(0.06,dt);
@@ -1272,6 +1307,10 @@ function frame(now){
   if(dqp.w<0) phOmega.negate();
 
   stepPhysics(dt);
+  if(!dragging()&&!S.tilt){
+    const idleDamp=intro?.92:.975;
+    for(let i=1;i<P.length;i++)P[i].v.multiplyScalar(idleDamp);
+  }
   syncMeshes(dt);
 
   for(let i=0;i<sparks.length;i++){
