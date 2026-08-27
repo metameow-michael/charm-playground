@@ -30,7 +30,7 @@
     filter:drop-shadow(0 1px 0 rgba(0,0,0,.45)) drop-shadow(0 4px 14px rgba(0,0,0,.35));}
   .sub{display:block;margin-top:4px;font-size:9px;font-weight:700;letter-spacing:.42em;
     color:#DCDCE6;opacity:.6;text-transform:uppercase;}
-  #bgSwatches{position:fixed;top:calc(env(safe-area-inset-top) + 18px);right:20px;z-index:6;
+  #bgSwatches{position:fixed;top:calc(env(safe-area-inset-top) + 54px);right:20px;z-index:6;
     display:flex;gap:8px;padding:7px 9px;border:1px solid rgba(255,255,255,.45);
     border-radius:999px;background:rgba(35,34,43,.34);backdrop-filter:blur(12px);}
   .bgSw{width:24px;height:24px;border:2px solid rgba(20,18,26,.85);border-radius:50%;
@@ -38,7 +38,20 @@
     transition:transform .12s cubic-bezier(.3,1.6,.5,1),box-shadow .12s;}
   .bgSw:active{transform:translateY(2px);box-shadow:0 0 0 rgba(20,18,26,.75);}
   .bgSw[aria-pressed="true"]{outline:2px solid #fff;outline-offset:2px;}
-  @media (max-width:520px){#bgSwatches{top:calc(env(safe-area-inset-top) + 14px);right:12px;gap:6px;padding:6px 8px;}.bgSw{width:21px;height:21px;}}
+  @media (max-width:520px){
+    #langSwitch{top:calc(env(safe-area-inset-top) + 12px);right:12px;}
+    #bgSwatches{top:calc(env(safe-area-inset-top) + 48px);right:12px;gap:6px;padding:6px 8px;}
+    .bgSw{width:21px;height:21px;}
+    .langBtn{padding:4px 7px;font-size:9.5px;}
+    /* "ENG / 中文 / 日本語" is wider than the old "EN / 中 / 日", so at narrow
+       widths give it room by shrinking the wordmark rather than letting the
+       two rows collide. */
+    .wordmark{font-size:22px;}
+  }
+  @media (max-width:340px){
+    .langBtn{padding:3px 5px;font-size:8.5px;}
+    .wordmark{font-size:16px;}
+  }
   .hint{position:fixed;top:calc(env(safe-area-inset-top) + 76px);left:20px;z-index:5;
     font-size:11px;font-weight:600;color:#EAEAF2;opacity:.62;pointer-events:none;
     transition:opacity .6s ease;text-shadow:0 1px 6px rgba(0,0,0,.6);line-height:1.5;}
@@ -63,6 +76,39 @@
 
   #row{display:flex;gap:7px;align-items:center;overflow-x:auto;scrollbar-width:none;padding:2px;min-height:48px;}
   #row::-webkit-scrollbar{display:none;}
+  /* stacked above #bgSwatches, which already occupies this top-right corner */
+  #langSwitch{position:fixed;top:calc(env(safe-area-inset-top) + 15px);right:20px;z-index:6;
+    display:flex;gap:4px;pointer-events:auto;}
+  .langBtn{border:2px solid var(--ink);border-radius:999px;padding:5px 11px;cursor:pointer;
+    font:inherit;font-size:11px;font-weight:800;color:var(--ink);
+    background:linear-gradient(180deg,var(--chrome-1) 0%,var(--chrome-4) 44%,var(--chrome-2) 56%,#FFF 100%);
+    box-shadow:0 2px 0 var(--ink);
+    transition:transform .12s cubic-bezier(.3,1.6,.5,1),box-shadow .12s;}
+  .langBtn:active{transform:translateY(2px);box-shadow:0 0 0 var(--ink);}
+  .langBtn[aria-pressed="true"]{background:linear-gradient(180deg,#FF7FB0 0%,var(--pink) 52%,#FF9AC2 100%);color:#fff;}
+  #row2:empty{display:none;}
+  #row2{display:flex;align-items:center;gap:10px;padding:2px 4px 4px;}
+  .sldlab{flex:0 0 auto;font-size:11px;font-weight:800;color:#E4E4EE;letter-spacing:-.01em;}
+  .sldlab .ko{font-size:8px;font-weight:600;opacity:.5;margin-left:3px;}
+  .sldval{flex:0 0 auto;min-width:34px;text-align:right;font-size:11px;font-weight:700;
+    color:#B9B9C8;font-variant-numeric:tabular-nums;}
+  input[type=range].sld{
+    -webkit-appearance:none;appearance:none;flex:1 1 auto;min-width:90px;height:22px;
+    background:transparent;cursor:pointer;}
+  input[type=range].sld::-webkit-slider-runnable-track{
+    height:8px;border-radius:99px;border:2px solid var(--ink);
+    background:linear-gradient(180deg,#FFF 0%,#D8D8E4 52%,#FFF 100%);}
+  input[type=range].sld::-webkit-slider-thumb{
+    -webkit-appearance:none;appearance:none;width:20px;height:20px;margin-top:-8px;
+    border-radius:99px;border:2px solid var(--ink);
+    background:linear-gradient(180deg,#FF8CB8 0%,var(--pink) 55%,#FFA6C8 100%);
+    box-shadow:0 2px 0 var(--ink);}
+  input[type=range].sld::-moz-range-track{
+    height:8px;border-radius:99px;border:2px solid var(--ink);
+    background:linear-gradient(180deg,#FFF 0%,#D8D8E4 52%,#FFF 100%);}
+  input[type=range].sld::-moz-range-thumb{
+    width:18px;height:18px;border-radius:99px;border:2px solid var(--ink);
+    background:linear-gradient(180deg,#FF8CB8 0%,var(--pink) 55%,#FFA6C8 100%);}
 
   .chip{flex:0 0 auto;cursor:pointer;border:2px solid var(--ink);border-radius:999px;
     background:linear-gradient(180deg,var(--chrome-1) 0%,var(--chrome-4) 44%,var(--chrome-2) 56%,#FFF 100%);
@@ -111,19 +157,20 @@
 
 <header>
   <span class="wordmark">mallang charm</span>
-  <span class="sub">말랑참 · design &amp; swing</span>
+  <span class="sub">말랑참 · <span id="subTag">design &amp; swing</span></span>
 </header>
+<div id="langSwitch" role="group" aria-label="Language"></div>
 <div id="bgSwatches" role="group" aria-label="Background color"></div>
 <div class="hint" id="hint">
-  Drag to spin the phone <b>·</b> flick it and let go<br>
-  <span>Two fingers, or shift-drag, to move it</span>
+  <span id="hint1">Drag to spin the phone</span> <b>·</b> <span id="hint1b">flick it and let go</span><br>
+  <span id="hint2">Two fingers, or shift-drag, to move it</span>
 </div>
 
 <button class="fab" id="tilt" aria-pressed="false">Tilt off</button>
 <button class="fab" id="reset">Reset</button>
-<button class="fab" id="shutter" aria-label="Take a photo">SNAP<i>찰칵</i></button>
+<button class="fab" id="shutter" aria-label="Take a photo"><span id="snapLabel">SNAP</span><i>찰칵</i></button>
 
-<div id="tray"><div id="tabs" role="tablist"></div><div id="row"></div></div>
+<div id="tray"><div id="tabs" role="tablist"></div><div id="row"></div><div id="row2"></div></div>
 <div id="flash"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -145,56 +192,104 @@ const CHARM_MASS_SCALE = .1;
    CONTENT
    =================================================================== */
 const CASES=[
-  {n:"Clear",  hex:0xF2F4FA, opacity:0.24, metal:0.0, rough:0.03, env:2.2},
-  {n:"Milk",   hex:0xFBF3EA, opacity:0.80, metal:0.0, rough:0.16, env:1.3},
-  {n:"Bubble", hex:0xFF9CC0, opacity:0.62, metal:0.0, rough:0.08, env:1.7},
-  {n:"Mint",   hex:0x8FEFDD, opacity:0.62, metal:0.0, rough:0.08, env:1.7},
-  {n:"Lilac",  hex:0xBFA9FF, opacity:0.62, metal:0.0, rough:0.08, env:1.7},
-  {n:"Chrome", hex:0xEFEFF6, opacity:1.00, metal:1.0, rough:0.05, env:2.6},
+  {n:"Clear",  zh:"透明",   ja:"クリア",     hex:0xF2F4FA, opacity:0.24, metal:0.0, rough:0.03, env:2.2},
+  {n:"Milk",   zh:"牛奶白", ja:"ミルク",     hex:0xFBF3EA, opacity:0.80, metal:0.0, rough:0.16, env:1.3},
+  {n:"Bubble", zh:"泡泡糖", ja:"バブルガム", hex:0xFF9CC0, opacity:0.62, metal:0.0, rough:0.08, env:1.7},
+  {n:"Mint",   zh:"薄荷",   ja:"ミント",     hex:0x8FEFDD, opacity:0.62, metal:0.0, rough:0.08, env:1.7},
+  {n:"Lilac",  zh:"淡紫",   ja:"ライラック", hex:0xBFA9FF, opacity:0.62, metal:0.0, rough:0.08, env:1.7},
+  {n:"Chrome", zh:"镀铬",   ja:"クローム",   hex:0xEFEFF6, opacity:1.00, metal:1.0, rough:0.05, env:2.6},
 ];
 // volFactor: fraction of the bounding box the shape actually fills.
 // densityMul: metal frame is a zinc-alloy shell, far denser than acrylic.
 const SHAPES=[
-  {k:"frame",  n:"Frame",  ko:"액자", volFactor:.62, densityMul:1.0},
-  {k:"sakura", n:"Sakura", ko:"벚꽃", volFactor:.42, densityMul:1.0},
-  {k:"heart",  n:"Heart",  ko:"하트", volFactor:.58, densityMul:1.0},
-  {k:"tag",    n:"Tag",    ko:"태그", volFactor:.80, densityMul:1.0},
+  {k:"frame",  n:"Frame",  ko:"액자", zh:"相框",   ja:"フレーム",   volFactor:.62, densityMul:1.0},
+  {k:"sakura", n:"Sakura", ko:"벚꽃", zh:"樱花",   ja:"桜",         volFactor:.42, densityMul:1.0},
+  {k:"heart",  n:"Heart",  ko:"하트", zh:"爱心",   ja:"ハート",     volFactor:.58, densityMul:1.0},
+  {k:"tag",    n:"Tag",    ko:"태그", zh:"吊牌",   ja:"タグ",       volFactor:.80, densityMul:1.0},
+  {k:"keyboard",n:"Keyboard",ko:"키보드",zh:"键帽", ja:"キーキャップ",volFactor:.64,densityMul:1.0},
+  {k:"bunny",   n:"Bunny",   ko:"토끼",  zh:"兔子", ja:"うさぎ",     volFactor:.55,densityMul:1.0},
+  {k:"ribbon",  n:"Ribbon",  ko:"리본",  zh:"蝴蝶结",ja:"リボン",    volFactor:.48,densityMul:1.0},
+  {k:"pudding", n:"Pudding", ko:"푸딩",  zh:"布丁", ja:"プリン",     volFactor:.68,densityMul:1.0},
 ];
 // density in g/cm^3 (real values). restitution/friction are contact properties.
 const MATERIALS=[
-  {k:"acrylic",n:"Acrylic",ko:"아크릴", density:1.19, restitution:.06, friction:.45,
+  {k:"acrylic",n:"Acrylic",ko:"아크릴", zh:"亚克力",ja:"アクリル", density:1.19, restitution:.06, friction:.45,
    angDamp:.85, linDamp:.18, jointFric:.10, squash:0,
    opacity:.86,rough:.06,cc:1,ccr:.03,env:1.6,sparkle:0,metalTone:0xE6E6EE},
-  {k:"jelly",  n:"Jelly",  ko:"젤리",   density:1.15, restitution:.10, friction:.95,
+  {k:"jelly",  n:"Jelly",  ko:"젤리",   zh:"果冻",  ja:"ゼリー",   density:1.15, restitution:.10, friction:.95,
    angDamp:1.5, linDamp:.32, jointFric:.16, squash:1,
    opacity:.70,rough:.20,cc:1,ccr:.16,env:1.2,sparkle:0,metalTone:0xE8B9A6},
-  {k:"glitter",n:"Glitter",ko:"글리터", density:1.62, restitution:.05, friction:.42,
+  {k:"glitter",n:"Glitter",ko:"글리터", zh:"闪粉",  ja:"グリッター",density:1.62, restitution:.05, friction:.42,
    angDamp:.70, linDamp:.14, jointFric:.08, squash:0,
    opacity:.95,rough:.30,cc:1,ccr:.10,env:2.0,sparkle:1,metalTone:0xE3C079},
 ];
 const COLORS=[
-  {n:"Peach",hex:0xFFB7AB},{n:"Pink",hex:0xFF5D93},{n:"Mint",hex:0x8FEFDD},
-  {n:"Butter",hex:0xFFDD86},{n:"Lilac",hex:0xC4B2FF},{n:"Milk",hex:0xF6EBDD},
+  {n:"Peach",zh:"蜜桃",ja:"ピーチ",hex:0xFFB7AB},{n:"Pink",zh:"粉色",ja:"ピンク",hex:0xFF5D93},
+  {n:"Mint",zh:"薄荷",ja:"ミント",hex:0x8FEFDD},{n:"Butter",zh:"奶油黄",ja:"バター",hex:0xFFDD86},
+  {n:"Lilac",zh:"淡紫",ja:"ライラック",hex:0xC4B2FF},{n:"Milk",zh:"牛奶白",ja:"ミルク",hex:0xF6EBDD},
 ];
 const BG_COLORS=[
-  {n:"Pearl",hex:0xB1B2B8},{n:"Silver",hex:0x94969E},{n:"Chrome",hex:0x737580},
-  {n:"Smoke",hex:0x575A63},{n:"Blue gray",hex:0x181A20},
+  {n:"Pearl",zh:"珍珠灰",ja:"パール",hex:0xB1B2B8},{n:"Silver",zh:"银色",ja:"シルバー",hex:0x94969E},
+  {n:"Chrome",zh:"镀铬",ja:"クローム",hex:0x737580},{n:"Smoke",zh:"烟灰",ja:"スモーク",hex:0x575A63},
+  {n:"Blue gray",zh:"蓝灰",ja:"ブルーグレー",hex:0x181A20},
 ];
 const HOOKS=[
-  {n:"Ring",ko:"링",k:"ring"},{n:"Heart",ko:"하트",k:"heart"},
-  {n:"Sakura",ko:"벚꽃",k:"sakura"},
+  {n:"Ring",ko:"링",zh:"圆环",ja:"リング",k:"ring"},
+  {n:"Heart",ko:"하트",zh:"爱心",ja:"ハート",k:"heart"},
+  {n:"Sakura",ko:"벚꽃",zh:"樱花",ja:"桜",k:"sakura"},
 ];
 // beadMass in kg, per bead. A 6 mm glass pearl is 0.28 g.
 const STRANDS=[
-  {k:"flower",n:"Blossom",ko:"플라워",link:"cord",beadMass:.00042,bend:.00040,
-   pattern:["pearl","flower","pearl","flower","bead","flower","pearl"]},
-  {k:"pearl", n:"Pearl",  ko:"진주",  link:"cord",beadMass:.00030,bend:.00055,
-   pattern:["pearl","spacer","pearl","pearl","spacer","pearl","pearl"]},
-  {k:"jelly", n:"Jelly",  ko:"젤리",  link:"cord",beadMass:.00055,bend:.00090,
-   pattern:["bead","pearl","bead","bead","pearl","bead","bead"]},
-  {k:"chain", n:"Chain",  ko:"체인",  link:"link",beadMass:.00075,bend:0,
-   pattern:[null,null,null,null,null,null,null]},
+  {k:"flower",n:"Blossom",ko:"플라워",zh:"花朵",ja:"フラワー",cord:true, beadMass:.00042,bend:.00040,
+   seq:["pearl","flower","pearl","crimp"]},
+  {k:"pearl", n:"Pearl",  ko:"진주",  zh:"珍珠",ja:"パール",  cord:true, beadMass:.00030,bend:.00055,
+   seq:["pearl","spacer"]},
+  {k:"jelly", n:"Jelly",  ko:"젤리",  zh:"果冻",ja:"ゼリー",  cord:true, beadMass:.00055,bend:.00090,
+   seq:["bead","crimp","bead","pearl"]},
+  {k:"chain", n:"Chain",  ko:"체인",  zh:"链条",ja:"チェーン",cord:false,beadMass:.00075,bend:0,
+   seq:["link"]},
 ];
+/* Footprint each element occupies ALONG the strand. Beads are laid end to end so
+   they touch; a link's footprint is deliberately half its geometry so successive
+   links overlap and interlock instead of floating apart. */
+/* Interface language. Korean labels (the `ko` fields above) are a fixed
+   cosmetic layer and are NOT switched by this -- they render in every mode.
+   `nameOf` picks the main label: current language if the table has it,
+   else falls back to the English field (tables use either `n` or `en`). */
+function nameOf(o){
+  const v=o[S.lang];
+  if(v!==undefined) return v;
+  return o.n!==undefined?o.n:o.en;
+}
+const I18N={
+  en:{tagline:"design & swing",
+      hint1:"Drag to spin the phone",hint1b:"flick it and let go",
+      hint2:"Two fingers, or shift-drag, to move it",
+      tiltOn:"Tilt on",tiltOff:"Tilt off",reset:"Reset",snap:"SNAP",length:"Length",
+      takePhoto:"Take a photo",chainLength:"Chain length",
+      bgColor:"Background color",bgSuffix:" background"},
+  zh:{tagline:"设计与摇摆",
+      hint1:"拖动手机旋转",hint1b:"轻甩后松开",
+      hint2:"双指或按住 Shift 拖动可移动位置",
+      tiltOn:"倾斜开启",tiltOff:"倾斜关闭",reset:"重置",snap:"拍照",length:"长度",
+      takePhoto:"拍照",chainLength:"链长",
+      bgColor:"背景颜色",bgSuffix:" 背景"},
+  ja:{tagline:"デザイン＆スイング",
+      hint1:"ドラッグしてスマホを回す",hint1b:"はじいて手を離す",
+      hint2:"二本指、またはShift+ドラッグで移動",
+      tiltOn:"傾き ON",tiltOff:"傾き OFF",reset:"リセット",snap:"撮影",length:"長さ",
+      takePhoto:"写真を撮る",chainLength:"チェーンの長さ",
+      bgColor:"背景色",bgSuffix:" 背景"},
+};
+function T(k){return I18N[S.lang][k];}
+const ELEM={
+  link:  {len:.0145},
+  pearl: {len:.0285},
+  spacer:{len:.0085},
+  flower:{len:.0270},
+  bead:  {len:.0345},
+  crimp: {len:.0120},
+};
 
 /* ---- procedural art ---- */
 const INK="#241E28";
@@ -246,7 +341,7 @@ const ART={
       g.strokeStyle="rgba(36,30,40,.35)";g.lineWidth=4;g.stroke();});},
 };
 const ART_KEYS=Object.keys(ART);
-const S={caseI:0,shapeI:1,mat:0,color:1,strand:0,art:4,hook:1,hookColor:1,bg:2,tilt:false};
+const S={lang:"en",linkLen:.040,caseI:0,shapeI:1,mat:0,color:1,strand:0,art:4,hook:1,hookColor:1,bg:2,tilt:false};
 function SH(){return SHAPES[S.shapeI];}
 function MT(){return MATERIALS[S.mat];}
 function ST(){return STRANDS[S.strand];}
@@ -359,6 +454,41 @@ function roundRectPoints(w,h,r,n,ox,oy){
   return roundRectShape(w,h,r).getPoints(n||48).map(function(p){
     return new THREE.Vector2(p.x+(ox||0),p.y+(oy||0));});
 }
+
+/* A keycap is a frustum, not a slab: bottom wider than top, rounded corners,
+   slight dish. Loft two rounded-rect outlines instead of extruding one, so the
+   skirt actually tapers the way a moulded keycap does. Side ring vertices are
+   shared (smooth corners); caps get their own copies (crisp top edge). */
+function keycapGeometry(bw,bh,tw,th,d,rB,rT,dish){
+  function ring(w,h,r){
+    const p=roundRectShape(w,h,r).getPoints(6);
+    // the outline closes on itself; drop the repeated last point so the seam
+    // corner shares one vertex and shades smoothly like the other three
+    if(p.length>1&&p[0].distanceTo(p[p.length-1])<1e-6) p.pop();
+    return p;
+  }
+  const b=ring(bw,bh,rB), t=ring(tw,th,rT);
+  const n=Math.min(b.length,t.length);
+  const z0=-d/2, z1=d/2;
+  const pos=[], idx=[];
+  for(let i=0;i<n;i++) pos.push(b[i].x,b[i].y,z0);              // 0 .. n-1
+  for(let i=0;i<n;i++) pos.push(t[i].x,t[i].y,z1);              // n .. 2n-1
+  for(let i=0;i<n;i++){const j=(i+1)%n;
+    idx.push(i,j,n+j, i,n+j,n+i);}                              // skirt
+  const cT=n*2;
+  for(let i=0;i<n;i++) pos.push(t[i].x,t[i].y,z1);              // 2n .. 3n-1
+  pos.push(0,0,z1-dish);                                        // 3n  top centre
+  for(let i=0;i<n;i++){const j=(i+1)%n;idx.push(3*n,cT+i,cT+j);}
+  const cB=3*n+1;
+  for(let i=0;i<n;i++) pos.push(b[i].x,b[i].y,z0);              // 3n+1 .. 4n
+  pos.push(0,0,z0);                                             // 4n+1 bottom centre
+  for(let i=0;i<n;i++){const j=(i+1)%n;idx.push(4*n+1,cB+j,cB+i);}
+  const g=new THREE.BufferGeometry();
+  g.setAttribute("position",new THREE.Float32BufferAttribute(pos,3));
+  g.setIndex(idx);g.computeVertexNormals();
+  return g;
+}
+
 function heartShape(k){
   const s=new THREE.Shape();
   s.moveTo(0,-.52*k);
@@ -412,6 +542,13 @@ const matIrid=new THREE.MeshPhysicalMaterial({color:0xFFF2FA,transparent:true,op
 const matBead=new THREE.MeshPhysicalMaterial({color:0xFFB7D2,transparent:true,opacity:.62,
   roughness:.05,metalness:0,clearcoat:1,clearcoatRoughness:.03,envMapIntensity:1.8,depthWrite:false});
 const matCord=new THREE.MeshStandardMaterial({color:0xFFD3E2,roughness:.72,metalness:.04});
+/* keycap: moulded PBT, semi-matte with a faint sheen. keybed: thick clear
+   acrylic, low roughness and high env so the bevelled edges catch light. */
+const matKeycap=new THREE.MeshPhysicalMaterial({color:0xFFF5E9,roughness:.32,metalness:.02,
+  clearcoat:.5,clearcoatRoughness:.32,envMapIntensity:1.15});
+const matKeybed=new THREE.MeshPhysicalMaterial({color:0xF4F7FF,transparent:true,opacity:.30,
+  roughness:.02,metalness:0,clearcoat:1,clearcoatRoughness:.02,envMapIntensity:2.7,
+  side:THREE.DoubleSide,depthWrite:false});
 const matAcrylic=new THREE.MeshPhysicalMaterial({color:COLORS[1].hex,transparent:true,opacity:.86,
   roughness:.06,metalness:0,clearcoat:1,clearcoatRoughness:.03,envMapIntensity:1.6,
   side:THREE.DoubleSide,depthWrite:false});
@@ -603,6 +740,55 @@ function buildPendant(){
     addPart(new THREE.Mesh(new THREE.SphereGeometry(CH.w*.048,12,10),
       new THREE.MeshPhysicalMaterial({color:0xFFD65E,roughness:.2,clearcoat:1,envMapIntensity:1.5})),true)
       .position.set(0,0,.031);
+  } else if(k==="keyboard"){
+    // A single key in a clear plastic bed, axis pointing at the viewer.
+    // Bed is an open shell (four walls + a floor) so you can see into the well.
+    const BED=.36, WALL=.086, BEDD=.20;
+    const shell=roundRectShape(BED,BED,.046);
+    shell.holes.push(new THREE.Path(roundRectPoints(BED-WALL,BED-WALL,.030,40,0,0)));
+    const walls=addPart(new THREE.Mesh(extrude(shell,BEDD,.014,24),matKeybed),true);
+    walls.position.set(0,0,-.060);walls.renderOrder=4;
+    const floor=addPart(new THREE.Mesh(
+      extrude(roundRectShape(BED,BED,.046),.034,.012,24),matKeybed),true);
+    floor.position.set(0,0,-.146);floor.renderOrder=4;
+
+    // the keycap itself: tapered skirt, sits on the bed rim and dips into the well
+    const cap=addPart(new THREE.Mesh(
+      keycapGeometry(.300,.300,.238,.238,.118,.042,.030,.009),matKeycap),true);
+    cap.position.set(0,0,.070);
+
+    // printed legend on the top face, driven by the Art tab
+    const a=addPart(new THREE.Mesh(new THREE.PlaneGeometry(.165,.165),matArt),true);
+    a.position.set(0,0,.1305);a.renderOrder=1;
+
+    // stem up to the charm ring
+    const post=addPart(new THREE.Mesh(
+      new THREE.CylinderGeometry(.017,.017,.130,10),matPendantMetal),true);
+    post.position.set(0,.238,-.030);
+  } else if(k==="bunny"){
+    const bunnyMat=matAcrylic.clone();bunnyMat.opacity=.72;
+    const earL=addPart(new THREE.Mesh(extrude(roundRectShape(.12,.29,.055),.055,.012,20),bunnyMat),true);
+    earL.position.set(-.105,.125,.006);earL.rotation.z=-.16;
+    const earR=addPart(new THREE.Mesh(extrude(roundRectShape(.12,.29,.055),.055,.012,20),bunnyMat),true);
+    earR.position.set(.105,.125,.006);earR.rotation.z=.16;
+    const head=addPart(new THREE.Mesh(new THREE.SphereGeometry(.19,20,14),bunnyMat));
+    head.scale.set(1,.86,.38);head.position.set(0,-.045,.006);
+    const nose=addPart(new THREE.Mesh(new THREE.SphereGeometry(.035,12,8),matBead));
+    nose.position.set(0,-.055,.085);
+  } else if(k==="ribbon"){
+    const ribbonMat=matAcrylic.clone();ribbonMat.opacity=.78;
+    const left=addPart(new THREE.Mesh(extrude(heartShape(.19),.055,.012,22),ribbonMat),true);
+    left.position.set(-.115,0,0);left.rotation.z=-.55;
+    const right=addPart(new THREE.Mesh(extrude(heartShape(.19),.055,.012,22),ribbonMat),true);
+    right.position.set(.115,0,0);right.rotation.z=.55;
+    addPart(new THREE.Mesh(new THREE.SphereGeometry(.075,16,12),matPendantMetal),true).position.set(0,0,.035);
+  } else if(k==="pudding"){
+    const puddingMat=matAcrylic.clone();puddingMat.opacity=.82;puddingMat.color.setHex(0xFFD978);
+    addPart(new THREE.Mesh(extrude(roundRectShape(.36,.34,.09),.12,.018,24),puddingMat),true).renderOrder=2;
+    const topping=addPart(new THREE.Mesh(new THREE.SphereGeometry(.055,14,10),matBead));
+    topping.position.set(0,.17,.055);topping.scale.set(1,.65,1);
+    const cherry=addPart(new THREE.Mesh(new THREE.SphereGeometry(.032,12,8),matIrid));
+    cherry.position.set(.035,.205,.075);
   } else if(k==="heart"){
     addPart(new THREE.Mesh(extrude(heartShape(CH.h*1.05),CH.d,.016,28),matAcrylic),true).renderOrder=2;
     const a=addPart(new THREE.Mesh(new THREE.PlaneGeometry(CH.w*.60,CH.w*.60),matArt),true);
@@ -622,7 +808,15 @@ function redrawArt(){
    XPBD SOLVER
    Particles for the strand, one real rigid body for the pendant.
    =================================================================== */
-const NLINK=6, LINKLEN=.015;
+// 6 x .030 gave a 0.15 strand against a 0.54 pendant: once the clasp and the
+// end margins were subtracted there was almost no room left for beads, so the
+// strand rendered as a stub. 8 x .040 gives ~0.32, close to the strand:charm
+// ratio in real phone charms.
+const NLINK=8;
+// Segment rest length is live: the slider retunes the existing constraints rather
+// than rebuilding the rig, so particle count and topology never change.
+const LINK_MIN=.020, LINK_MAX=.078, LINK_DEF=.040;
+let LINKLEN=LINK_DEF;
 const SUB=14;                              // XPBD converges with substeps, not iterations
 
 /* --- particles --- */
@@ -645,7 +839,13 @@ const ANCH_L=new V3(0,CH.h/2+CH.ringGap,0);   // where the chain meets the penda
 function rebuildInertia(){
   const sh=SH(), M=MT();
   // bounding box in cm, times fill factor, times density -> grams -> kg
-  const wcm=CH.w*U_PER_M*10, hcm=CH.h*U_PER_M*10, dcm=CH.d*U_PER_M*10;
+  // units -> cm. One unit is 1/U_PER_M metres, so cm = units * 100 / U_PER_M.
+  // This was units * U_PER_M * 10, i.e. 10x too big on every axis and therefore
+  // 1000x too heavy: a 9.3 g charm came out as 9.3 kg, which against 0.42 g beads
+  // is a ~2000:1 mass ratio the solver cannot hold. The strand stretched to
+  // absurd lengths, which is why the beads no longer reached the pendant.
+  const CM=100/U_PER_M;
+  const wcm=CH.w*CM, hcm=CH.h*CM, dcm=CH.d*CM;
   const grams=wcm*hcm*dcm*sh.volFactor*M.density*sh.densityMul;
   const m=grams/1000*CHARM_MASS_SCALE;
   const w=CH.w*Math.sqrt(sh.volFactor), h=CH.h*Math.sqrt(sh.volFactor), d=CH.d;
@@ -736,6 +936,85 @@ function boxResolve(worldPos,radius,outN){
   outN.applyQuaternion(phQuat);
   return depth;
 }
+
+/* ===================================================================
+   UNSTICK -- the per-substep contact solver only ever pushes out along the
+   axis of LEAST penetration for each point independently. When the pendant
+   gets wedged into a corner of the case, two sample points can end up
+   fighting over different axes and the correction cancels out frame after
+   frame, which is what "stuck" actually is. Rather than trying to make the
+   continuous solver corner-proof, this does one direct positional fix: for
+   every strand particle and pendant sample currently inside the case, push
+   it out along its own contact normal by more than the penetration depth,
+   and hand it an outward velocity (plus a little randomness, so a body
+   wedged symmetrically doesn't just settle straight back into the same
+   corner). It is only invoked on an explicit shake gesture, never silently
+   every frame, so it can't fight the normal solver during ordinary play.
+   ------------------------------------------------------------------- */
+const UNSTICK_CLEAR=.016, UNSTICK_KICK=1.35, UNSTICK_JITTER=.55, UNSTICK_SPIN=5.5;
+const _accN=new V3(),_jit=new V3();
+function jitter3(v){v.set(Math.random()-.5,Math.random()-.5,Math.random()-.5);
+  if(v.lengthSq()<1e-6) v.set(1,0,0); return v.normalize();}
+function tryUnstick(){
+  let hit=false;
+  for(let i=1;i<P.length;i++){
+    const q=P[i];
+    const depth=boxResolve(q.p,q.r,_n);
+    if(depth<=0) continue;
+    q.p.addScaledVector(_n,depth+UNSTICK_CLEAR);
+    q.v.copy(_n).multiplyScalar(UNSTICK_KICK).addScaledVector(jitter3(_jit),UNSTICK_JITTER);
+    hit=true;
+  }
+  _accN.set(0,0,0);let maxDepth=0,count=0;
+  for(let s=0;s<SAMPLES.length;s++){
+    _rA.copy(SAMPLES[s]).applyQuaternion(pend.q);
+    _wp.copy(pend.x).add(_rA);
+    const depth=boxResolve(_wp,.010,_n);
+    if(depth<=0) continue;
+    _accN.addScaledVector(_n,depth);maxDepth=Math.max(maxDepth,depth);count++;
+  }
+  {const depth=boxResolve(pend.x,.020,_n);
+   if(depth>0){_accN.addScaledVector(_n,depth);maxDepth=Math.max(maxDepth,depth);count++;}}
+  if(count>0){
+    _accN.normalize();
+    pend.x.addScaledVector(_accN,maxDepth+UNSTICK_CLEAR);
+    pend.v.copy(_accN).multiplyScalar(UNSTICK_KICK).addScaledVector(jitter3(_jit),UNSTICK_JITTER);
+    pend.w.set((Math.random()-.5)*UNSTICK_SPIN,(Math.random()-.5)*UNSTICK_SPIN,(Math.random()-.5)*UNSTICK_SPIN);
+    hit=true;
+  }
+  return hit;
+}
+
+/* ---- shake gesture detection: cursor-shake while spinning the phone, or a
+   real device shake via accelerometer. Both call the same debounced trigger. ---- */
+let unstickRequested=false;
+const SHAKE_WINDOW=550, SHAKE_REVERSALS=4, SHAKE_MIN_DX=6;
+let dragShakeHist=[];
+function feedDragShake(dx,t){
+  if(Math.abs(dx)>=SHAKE_MIN_DX) dragShakeHist.push({t:t,s:dx>0?1:-1});
+  while(dragShakeHist.length&&t-dragShakeHist[0].t>SHAKE_WINDOW) dragShakeHist.shift();
+  let reversals=0;
+  for(let i=1;i<dragShakeHist.length;i++) if(dragShakeHist[i].s!==dragShakeHist[i-1].s) reversals++;
+  if(reversals>=SHAKE_REVERSALS){unstickRequested=true;dragShakeHist.length=0;}
+}
+const SHAKE_ACCEL_DELTA=13, SHAKE_DEBOUNCE=700;
+let lastAccelMag=null,lastShakeAt=0;
+function onDeviceMotion(ev){
+  const a=ev.accelerationIncludingGravity||ev.acceleration;
+  if(!a||a.x===null) return;
+  const mag=Math.sqrt((a.x||0)*(a.x||0)+(a.y||0)*(a.y||0)+(a.z||0)*(a.z||0));
+  if(lastAccelMag!==null){
+    const now=performance.now();
+    if(Math.abs(mag-lastAccelMag)>SHAKE_ACCEL_DELTA&&now-lastShakeAt>SHAKE_DEBOUNCE){
+      lastShakeAt=now;unstickRequested=true;
+    }
+  }
+  lastAccelMag=mag;
+}
+const needsMotionPerm=typeof DeviceMotionEvent!=="undefined"&&
+  typeof DeviceMotionEvent.requestPermission==="function";
+if(!needsMotionPerm&&typeof window.DeviceMotionEvent!=="undefined")
+  window.addEventListener("devicemotion",onDeviceMotion,true);
 
 /* ---- one substep ---- */
 const _g=new V3(0,-GRAVITY,0);
@@ -911,39 +1190,105 @@ function stepPhysics(dt){
   for(let s=0;s<SUB;s++) substep(h,(s+1)/SUB);
 }
 
-/* ---- strand meshes ---- */
-const geoPearl=new THREE.SphereGeometry(1,18,13);
-const geoSpacer=new THREE.CylinderGeometry(1,1,1,14);
-const geoCord=new THREE.CylinderGeometry(1,1,1,8);
-const geoLink=new THREE.TorusGeometry(LINKLEN*.46,LINKLEN*.15,8,20);
-const geoFlowerBead=extrude(sakuraShape(.060,5),.030,.008,16);
-let connectors=[],beads=[],clasp=null;
-function clearStrand(){
-  connectors.concat(beads).forEach(function(m){if(m)scene.remove(m);});
-  if(clasp)scene.remove(clasp);
-  connectors=[];beads=[];clasp=null;
+/* Retune the strand in place. dist keeps segments at LINKLEN; bend spans two
+   segments so its rest scales with it. Meshes are rebuilt because the number of
+   beads that fit changes with length. */
+function setStrandLength(v){
+  LINKLEN=MU.clamp(v,LINK_MIN,LINK_MAX);
+  for(let i=0;i<dist.length;i++) dist[i].rest=LINKLEN;
+  for(let i=0;i<bend.length;i++) bend[i].rest=LINKLEN*1.94;
+  buildStrand();
 }
+
+/* ---- strand meshes -------------------------------------------------
+   Previously one mesh was drawn per physics particle, so a 6-particle strand
+   could only ever show ~5 beads and the spacing jumped around as the solver
+   moved. Rendering is now decoupled from simulation: the particles define a
+   smooth curve, and elements are laid along that curve by ARC LENGTH. Bead
+   count and spacing stay constant no matter what the solver does.
+   ------------------------------------------------------------------- */
+const geoPearl=new THREE.SphereGeometry(1,20,14);
+const geoSpacer=new THREE.CylinderGeometry(1,1,1,16);
+const geoCrimp=new THREE.CylinderGeometry(1,1,1,12);
+const geoCord=new THREE.CylinderGeometry(1,1,1,8);
+const geoLink=new THREE.TorusGeometry(.0105,.0035,10,22);
+const geoFlowerBead=extrude(sakuraShape(.036,5),.018,.005,18);
+const matChain=new THREE.MeshPhysicalMaterial({color:0x9AA0AE,roughness:.13,metalness:.95,
+  clearcoat:1,clearcoatRoughness:.02,envMapIntensity:2.8});
+
+/* curve resampling */
+const SAMP=48, CORDSEG=22;
+const sPts=[];for(let i=0;i<=SAMP;i++) sPts.push(new V3());
+const sLen=new Float32Array(SAMP+1);
+const curvePts=[];for(let i=0;i<=NLINK;i++) curvePts.push(new V3());
+const strandCurve=new THREE.CatmullRomCurve3(curvePts,false,"catmullrom",.5);
+let strandLen=0;
+function resampleStrand(){
+  for(let i=0;i<NLINK;i++) curvePts[i].copy(P[i].p);
+  curvePts[NLINK].copy(_ringW);
+  strandCurve.needsUpdate=true;
+  for(let i=0;i<=SAMP;i++) strandCurve.getPoint(i/SAMP,sPts[i]);
+  sLen[0]=0;
+  for(let i=1;i<=SAMP;i++) sLen[i]=sLen[i-1]+sPts[i].distanceTo(sPts[i-1]);
+  strandLen=sLen[SAMP];
+}
+function atArc(d,outP,outT){
+  d=MU.clamp(d,0,strandLen);
+  let i=1;while(i<SAMP&&sLen[i]<d) i++;
+  const seg=Math.max(sLen[i]-sLen[i-1],1e-9);
+  outP.lerpVectors(sPts[i-1],sPts[i],(d-sLen[i-1])/seg);
+  if(outT) outT.subVectors(sPts[i],sPts[i-1]).multiplyScalar(1/seg);
+}
+
+let elems=[],cordSegs=[],clasp=null;
+function clearStrand(){
+  elems.concat(cordSegs).forEach(function(m){if(m)scene.remove(m);});
+  if(clasp)scene.remove(clasp);
+  elems=[];cordSegs=[];clasp=null;
+}
+function rand1(i){const x=Math.sin(i*12.9898)*43758.5453;return x-Math.floor(x);}
+function makeElem(kind,i){
+  let m;
+  if(kind==="pearl"){
+    m=new THREE.Mesh(geoPearl,matPearl);
+    m.scale.setScalar(.0148*(.90+.20*rand1(i)));   // real pearls are never uniform
+  } else if(kind==="bead"){
+    m=new THREE.Mesh(geoPearl,matBead);
+    m.scale.setScalar(.0180*(.92+.16*rand1(i+7)));
+  } else if(kind==="spacer"){
+    m=new THREE.Mesh(geoSpacer,matSilver);m.scale.set(.0118,.0065,.0118);
+  } else if(kind==="crimp"){
+    m=new THREE.Mesh(geoCrimp,matSilver);m.scale.set(.0072,.0115,.0072);
+  } else if(kind==="flower"){
+    m=new THREE.Mesh(geoFlowerBead,matIrid);
+  } else {
+    m=new THREE.Mesh(geoLink,matChain);m.scale.x=.58;  // links are oval, not round
+  }
+  m.castShadow=true;m.userData.kind=kind;m.userData.len=ELEM[kind].len;
+  return m;
+}
+// HEAD clears the clasp; TAIL is set so the LAST element lands on the charm
+// ring's tube (ring radius .042) rather than stopping outside it.
+const HEAD=.020, TAIL=.028;
 function buildStrand(){
   clearStrand();
-  const st=ST(),isCord=st.link==="cord";
-  for(let i=0;i<NLINK-1;i++){
-    const m=new THREE.Mesh(isCord?geoCord:geoLink,isCord?matCord:matSilver);
-    m.castShadow=true;if(!isCord)m.scale.x=.68;
-    scene.add(m);connectors.push(m);
+  const st=ST();
+  if(st.cord){
+    for(let i=0;i<CORDSEG;i++){
+      const m=new THREE.Mesh(geoCord,matCord);m.castShadow=true;
+      scene.add(m);cordSegs.push(m);
+    }
   }
-  for(let i=1;i<NLINK;i++){
-    const kind=st.pattern[i-1];
-    if(!kind){beads.push(null);continue;}
-    let m;
-    if(kind==="pearl"){m=new THREE.Mesh(geoPearl,matPearl);m.scale.setScalar(.031);}
-    else if(kind==="spacer"){m=new THREE.Mesh(geoSpacer,matSilver);m.scale.set(.026,.016,.026);}
-    else if(kind==="bead"){m=new THREE.Mesh(geoPearl,matBead);m.scale.setScalar(.040);}
-    else{m=new THREE.Mesh(geoFlowerBead,matIrid);m.scale.setScalar(.95);}
-    m.castShadow=true;m.userData.kind=kind;scene.add(m);beads.push(m);
+  // enough elements to cover any plausible strand length; extras hide themselves
+  let acc=0,i=0;
+  while(acc<.60&&i<64){
+    const kind=st.seq[i%st.seq.length];
+    const m=makeElem(kind,i);
+    scene.add(m);elems.push(m);
+    acc+=m.userData.len;i++;
   }
-  clasp=new THREE.Mesh(extrude(heartShape(.115),.034,.010,20),matSilver);
+  clasp=new THREE.Mesh(extrude(heartShape(.060),.020,.007,20),matSilver);
   clasp.castShadow=true;scene.add(clasp);
-  // strand physics properties
   const im=1/st.beadMass;
   for(let i=1;i<P.length;i++) P[i].w=im;
   for(let k=0;k<bend.length;k++) bend[k].compliance=st.bend;
@@ -959,13 +1304,17 @@ function applyLook(){
   matAcrylic.metalness=M.sparkle?.35:0;
   matAcrylic.needsUpdate=true;
   matPendantMetal.color.setHex(M.metalTone);matPendantMetal.needsUpdate=true;
-  matMatte.color.setHex(col);matBead.color.setHex(col);
+  matMatte.color.setHex(col);matBead.color.setHex(col);matKeycap.color.setHex(col);
   matCord.color.setHex(new THREE.Color(col).lerp(new THREE.Color(0xFFFFFF),.42).getHex());
   rebuildInertia();
 }
 
 /* ---- push meshes to physics state ---- */
 const _d2=new V3(),UP_Y=new V3(0,1,0),_prevV=new V3();
+const _lx=new V3(),_lz=new V3(),_ringW=new V3(),_linkBasis=new THREE.Matrix4();
+const _ep=new V3(),_ep2=new V3(),_et=new V3();
+const LINK_REF=new V3(0,0,1);                 // roll reference: face rings at the camera
+const RING_L=new V3(0,CH.h/2+.034,0);         // charm ring, pendant-local
 function syncMeshes(dt){
   charm.position.copy(pend.x);
   charm.quaternion.copy(pend.q);
@@ -982,31 +1331,64 @@ function syncMeshes(dt){
   } else charmBody.scale.set(1,1,1);
   _prevV.copy(pend.v);
 
-  const isCord=ST().link==="cord";
-  for(let i=0;i<connectors.length;i++){
-    const m=connectors[i];if(!m)continue;
-    const a=P[i].p,b=P[i+1].p;
-    m.position.addVectors(a,b).multiplyScalar(.5);
-    _d2.subVectors(b,a);const L=_d2.length()||1;_d2.multiplyScalar(1/L);
+  _ringW.copy(RING_L).applyQuaternion(pend.q).add(pend.x);
+  resampleStrand();
+
+  // cord: short cylinders laid nose to tail along the curve, so it reads as one
+  // continuous strand rather than a polyline with visible kinks at each joint
+  for(let i=0;i<cordSegs.length;i++){
+    const m=cordSegs[i];
+    atArc(strandLen*i/CORDSEG,_ep);
+    atArc(strandLen*(i+1)/CORDSEG,_ep2);
+    m.position.addVectors(_ep,_ep2).multiplyScalar(.5);
+    _d2.subVectors(_ep2,_ep);
+    const L=_d2.length()||1;_d2.multiplyScalar(1/L);
     m.quaternion.setFromUnitVectors(UP_Y,_d2);
-    if(isCord) m.scale.set(.011,L,.011);
-    else if(i%2) m.rotateY(Math.PI/2);
+    m.scale.set(.0042,L*1.04,.0042);
   }
-  for(let i=1;i<NLINK;i++){
-    const m=beads[i-1];if(!m)continue;
-    m.position.copy(P[i].p);
-    const a=P[i-1].p;
-    const b=(i===NLINK-1)?_bodyAnchorW.copy(ANCH_L).applyQuaternion(pend.q).add(pend.x):P[i+1].p;
-    _d2.subVectors(b,a).normalize();
-    m.quaternion.setFromUnitVectors(UP_Y,_d2);
+
+  // Elements are laid end to end, then the run is stretched slightly so it fills
+  // the span from clasp to charm ring EXACTLY. Previously the run simply stopped
+  // once the next element would overflow, which left a dead gap of up to one
+  // element before the pendant -- the chain visibly failed to reach it.
+  const span=Math.max(strandLen-HEAD-TAIL,1e-4);
+  let acc=0,n=0;
+  while(n<elems.length&&acc+elems[n].userData.len<=span){acc+=elems[n].userData.len;n++;}
+  if(n===0){n=1;acc=elems.length?elems[0].userData.len:span;}
+  const fill=span/Math.max(acc,1e-6);          // ~1.00 to 1.10, never a visible stretch
+  let d=HEAD;
+  for(let i=0;i<elems.length;i++){
+    const m=elems[i];
+    if(i>=n){m.visible=false;continue;}
+    const len=m.userData.len*fill,c=d+len*.5;
+    d+=len;
+    m.visible=true;
+    atArc(c,_ep,_et);
+    _et.normalize();
+    m.position.copy(_ep);
+    orientAlong(m,_et,m.userData.kind==="link"&&(i&1));
     if(m.userData.kind==="flower") m.rotateX(Math.PI/2);
   }
+
   if(clasp){
-    clasp.position.copy(P[0].p).lerp(P[1].p,.40);
-    _d2.subVectors(P[1].p,P[0].p).normalize();
-    clasp.quaternion.setFromUnitVectors(UP_Y,_d2);
+    atArc(.011,_ep,_et);_et.normalize();
+    clasp.position.copy(_ep);
+    orientAlong(clasp,_et,false);
     clasp.rotateZ(Math.PI);
   }
+}
+
+/* Build an explicit frame: local Y along the strand, and for chain links flip the
+   hole axis 90deg on alternate links so they interlock the way real links do.
+   setFromUnitVectors alone leaves the roll arbitrary, which is what made some
+   links land edge-on and vanish. */
+function orientAlong(m,tan,roll90){
+  _lx.crossVectors(LINK_REF,tan);
+  if(_lx.lengthSq()<1e-8) _lx.set(1,0,0); else _lx.normalize();
+  _lz.crossVectors(_lx,tan).normalize();
+  if(roll90) _linkBasis.makeBasis(_lz,tan,_lx.negate());
+  else       _linkBasis.makeBasis(_lx,tan,_lz);
+  m.quaternion.setFromRotationMatrix(_linkBasis);
 }
 
 /* ===================================================================
@@ -1092,6 +1474,7 @@ canvas.addEventListener("pointermove",function(e){
     pitch  = MU.clamp(pitch + dy*0.0090, -1.25, 1.25);
     yawV   = dx*0.0115*60;
     pitchV = dy*0.0090*60;
+    feedDragShake(dx,performance.now());   // rapid back-and-forth = shake-to-unstick
   } else if(mode==="pan"){
     const w=toWorld(e.clientX,e.clientY);
     phoneTarget.set(
@@ -1133,22 +1516,30 @@ function startTilt(){
 }
 tiltBtn.addEventListener("click",function(){
   if(S.tilt){S.tilt=false;tiltReady=false;_g.set(0,-GRAVITY,0);
-    tiltBtn.textContent="Tilt off";tiltBtn.setAttribute("aria-pressed","false");return;}
+    tiltBtn.textContent=T("tiltOff");tiltBtn.setAttribute("aria-pressed","false");return;}
+  if(needsMotionPerm){
+    // Piggyback the shake-to-unstick permission on this same tap, so the
+    // person only ever sees one iOS permission prompt for tilt, not two.
+    DeviceMotionEvent.requestPermission().then(function(r){
+      if(r==="granted") window.addEventListener("devicemotion",onDeviceMotion,true);
+    })["catch"](function(){});
+  }
   if(needsPerm){
     DeviceOrientationEvent.requestPermission().then(function(r){
       if(r!=="granted")return;
-      S.tilt=true;intro=false;startTilt();tiltBtn.textContent="Tilt on";
+      S.tilt=true;intro=false;startTilt();tiltBtn.textContent=T("tiltOn");
       tiltBtn.setAttribute("aria-pressed","true");hintEl.classList.add("gone");
     })["catch"](function(){});
     return;
   }
-  S.tilt=true;intro=false;startTilt();tiltBtn.textContent="Tilt on";
+  S.tilt=true;intro=false;startTilt();tiltBtn.textContent=T("tiltOn");
   tiltBtn.setAttribute("aria-pressed","true");hintEl.classList.add("gone");
 });
 
 /* ===================================================================
    UI
    =================================================================== */
+const row2El=document.getElementById("row2");
 const tabsEl=document.getElementById("tabs"),rowEl=document.getElementById("row");
 function chip(en,ko,on,active){
   const b=document.createElement("button");b.className="chip";
@@ -1163,40 +1554,100 @@ function swatch(hex,label,on,active){
 }
 const bgSwatchesEl=document.getElementById("bgSwatches");
 BG_COLORS.forEach(function(c,i){
-  const b=document.createElement("button");b.className="bgSw";b.title=c.n;
-  b.setAttribute("aria-label",c.n+" background");b.style.background="#"+c.hex.toString(16).padStart(6,"0");
+  const b=document.createElement("button");b.className="bgSw";
+  b.style.background="#"+c.hex.toString(16).padStart(6,"0");
   b.setAttribute("aria-pressed",String(i===S.bg));
   b.onclick=function(){S.bg=i;applyBackground();
     BG_COLORS.forEach(function(_,j){bgSwatchesEl.children[j].setAttribute("aria-pressed",String(j===S.bg));});};
   bgSwatchesEl.appendChild(b);
 });
+function refreshBgLabels(){
+  BG_COLORS.forEach(function(c,i){
+    const label=nameOf(c)+T("bgSuffix");
+    bgSwatchesEl.children[i].title=label;
+    bgSwatchesEl.children[i].setAttribute("aria-label",label);
+  });
+}
+
+/* ===================================================================
+   LANGUAGE SWITCH
+   Korean (`.ko` spans, and the fixed "말랑참" tag in the header) is a
+   cosmetic layer and is intentionally NOT one of the switchable modes --
+   it stays visible under English, Chinese, and Japanese alike.
+   =================================================================== */
+const LANGS=[{k:"en",label:"ENG"},{k:"zh",label:"中文"},{k:"ja",label:"日本語"}];
+const langSwitchEl=document.getElementById("langSwitch");
+const subTagEl=document.getElementById("subTag"),
+      hint1El=document.getElementById("hint1"),hint1bEl=document.getElementById("hint1b"),
+      hint2El=document.getElementById("hint2"),snapLabelEl=document.getElementById("snapLabel"),
+      resetBtn=document.getElementById("reset"),shutterBtn=document.getElementById("shutter");
+function retranslate(){
+  document.documentElement.lang=S.lang;
+  subTagEl.textContent=T("tagline");
+  hint1El.textContent=T("hint1");hint1bEl.textContent=T("hint1b");hint2El.textContent=T("hint2");
+  resetBtn.textContent=T("reset");
+  snapLabelEl.textContent=T("snap");
+  shutterBtn.setAttribute("aria-label",T("takePhoto"));
+  tiltBtn.textContent=S.tilt?T("tiltOn"):T("tiltOff");
+  const tiltAria=tiltBtn.getAttribute("aria-pressed");
+  tiltBtn.setAttribute("aria-label",tiltAria==="true"?T("tiltOn"):T("tiltOff"));
+  refreshBgLabels();
+  paint();   // re-render the active tab's chips in the new language
+}
+const langBtns=LANGS.map(function(l){
+  const b=document.createElement("button");b.className="langBtn";
+  b.textContent=l.label;b.setAttribute("aria-pressed",String(l.k===S.lang));
+  b.onclick=function(){
+    if(S.lang===l.k)return;
+    S.lang=l.k;
+    langBtns.forEach(function(bb,i){bb.setAttribute("aria-pressed",String(LANGS[i].k===S.lang));});
+    retranslate();
+  };
+  langSwitchEl.appendChild(b);return b;
+});
+refreshBgLabels();   // set initial aria-labels for the default language
+
 function artThumb(k){
   const cv=document.createElement("canvas");cv.width=cv.height=512;
   const g=cv.getContext("2d");g.lineJoin="round";g.lineCap="round";
   ART[k](g,512,"#FFC0CF");return cv.toDataURL();
 }
+function slider(min,max,val,fmt,on){
+  const lab=document.createElement("span");lab.className="sldlab";
+  lab.innerHTML=T("length")+' <span class="ko">길이</span>';
+  const inp=document.createElement("input");
+  inp.type="range";inp.className="sld";
+  inp.min=min;inp.max=max;inp.step=(max-min)/100;inp.value=val;
+  inp.setAttribute("aria-label","Chain length");
+  const out=document.createElement("span");out.className="sldval";out.textContent=fmt(val);
+  inp.oninput=function(){const v=parseFloat(inp.value);out.textContent=fmt(v);on(v);};
+  row2El.appendChild(lab);row2El.appendChild(inp);row2El.appendChild(out);
+}
 const TABS=[
-  {en:"Case",ko:"케이스",build:function(){
-    CASES.forEach(function(c,i){rowEl.appendChild(swatch(c.hex,c.n,function(){
+  {en:"Case",zh:"手机壳",ja:"ケース",ko:"케이스",build:function(){
+    CASES.forEach(function(c,i){rowEl.appendChild(swatch(c.hex,nameOf(c),function(){
       S.caseI=i;applyCase();paint();nudge();},i===S.caseI));});}},
-  {en:"Shape",ko:"모양",build:function(){
-    SHAPES.forEach(function(s,i){rowEl.appendChild(chip(s.n,s.ko,function(){
+  {en:"Shape",zh:"形状",ja:"形",ko:"모양",build:function(){
+    SHAPES.forEach(function(s,i){rowEl.appendChild(chip(nameOf(s),s.ko,function(){
       S.shapeI=i;buildPendant();applyLook();paint();nudge();},i===S.shapeI));});}},
-  {en:"Finish",ko:"재질",build:function(){
-    MATERIALS.forEach(function(m,i){rowEl.appendChild(chip(m.n,m.ko,function(){
+  {en:"Finish",zh:"材质",ja:"素材",ko:"재질",build:function(){
+    MATERIALS.forEach(function(m,i){rowEl.appendChild(chip(nameOf(m),m.ko,function(){
       S.mat=i;applyLook();paint();nudge();},i===S.mat));});}},
-  {en:"Color",ko:"컬러",build:function(){
-    COLORS.forEach(function(c,i){rowEl.appendChild(swatch(c.hex,c.n,function(){
+  {en:"Color",zh:"颜色",ja:"カラー",ko:"컬러",build:function(){
+    COLORS.forEach(function(c,i){rowEl.appendChild(swatch(c.hex,nameOf(c),function(){
       S.color=i;applyLook();paint();nudge();},i===S.color));});}},
-  {en:"Strand",ko:"비즈",build:function(){
-    STRANDS.forEach(function(s,i){rowEl.appendChild(chip(s.n,s.ko,function(){
-      S.strand=i;buildStrand();paint();nudge();},i===S.strand));});}},
-  {en:"Hook",ko:"고리",build:function(){
-    HOOKS.forEach(function(h,i){rowEl.appendChild(chip(h.n,h.ko,function(){
+  {en:"Strand",zh:"挂链",ja:"ストラップ",ko:"비즈",build:function(){
+    STRANDS.forEach(function(s,i){rowEl.appendChild(chip(nameOf(s),s.ko,function(){
+      S.strand=i;buildStrand();paint();nudge();},i===S.strand));});
+    slider(LINK_MIN,LINK_MAX,S.linkLen,
+      function(v){return Math.round(v*(NLINK-1)*(100/U_PER_M)*10)+"mm";},
+      function(v){S.linkLen=v;setStrandLength(v);});}},
+  {en:"Hook",zh:"挂钩",ja:"フック",ko:"고리",build:function(){
+    HOOKS.forEach(function(h,i){rowEl.appendChild(chip(nameOf(h),h.ko,function(){
       S.hook=i;buildHook();applyHookLook();paint();nudge();},i===S.hook));});
-    COLORS.slice(0,5).forEach(function(c,i){rowEl.appendChild(swatch(c.hex,c.n,function(){
+    COLORS.slice(0,5).forEach(function(c,i){rowEl.appendChild(swatch(c.hex,nameOf(c),function(){
       S.hookColor=i;applyHookLook();paint();nudge();},i===S.hookColor));});}},
-  {en:"Art",ko:"그림",build:function(){
+  {en:"Art",zh:"图案",ja:"アート",ko:"그림",build:function(){
     ART_KEYS.forEach(function(k,i){
       const b=document.createElement("button");b.className="art";b.setAttribute("aria-label",k);
       b.setAttribute("aria-pressed",String(i===S.art));
@@ -1207,13 +1658,16 @@ const TABS=[
 let tabI=1;
 const tabBtns=TABS.map(function(t,i){
   const b=document.createElement("button");b.className="tab";b.setAttribute("role","tab");
-  b.innerHTML='<span class="en">'+t.en+'</span><span class="ko">'+t.ko+'</span>';
+  b.innerHTML='<span class="en">'+nameOf(t)+'</span><span class="ko">'+t.ko+'</span>';
   b.onclick=function(){tabI=i;paint();};
   tabsEl.appendChild(b);return b;
 });
 function paint(){
-  tabBtns.forEach(function(b,i){b.setAttribute("aria-selected",String(i===tabI));});
-  rowEl.innerHTML="";TABS[tabI].build();
+  tabBtns.forEach(function(b,i){
+    b.setAttribute("aria-selected",String(i===tabI));
+    b.querySelector(".en").textContent=nameOf(TABS[i]);
+  });
+  rowEl.innerHTML="";row2El.innerHTML="";TABS[tabI].build();
 }
 // impulse scaled by mass, so a heavy frame moves less than a light sakura
 function nudge(){
@@ -1281,7 +1735,12 @@ let last=performance.now(),t0=last,intro=true;
 
 function frame(now){
   requestAnimationFrame(frame);
-  const dt=Math.min((now-last)/1000,1/30);last=now;
+  // The rAF timestamp is the time the frame STARTED, which can precede the
+  // performance.now() captured at boot, so the first dt can be negative. A
+  // negative dt makes Math.pow(k,dt) explode and lerp/slerp overshoot to
+  // astronomical values, which threw the phone and the whole strand off-screen.
+  // Clamp to a sane range and never step physics on a non-positive dt.
+  const dt=MU.clamp((now-last)/1000,0,1/30);last=now;
   const t=(now-t0)/1000;
 
   if(intro){
@@ -1303,6 +1762,8 @@ function frame(now){
   }
   if(!dragging()&&!intro) phoneTarget.y=phoneTarget.y*0.98+(0.04+Math.sin(t*0.9)*0.020)*0.02;
 
+  if(dt<=0){renderer.render(scene,camera);return;}
+
   prevPhonePos.copy(phone.position);prevPhoneQ.copy(phone.quaternion);
   phone.position.lerp(phoneTarget,1-Math.pow(0.0008,dt));
   dragE.set(pitch,yaw,0,"YXZ");dragQ.setFromEuler(dragE);
@@ -1319,6 +1780,7 @@ function frame(now){
   if(dqp.w<0) phOmega.negate();
 
   stepPhysics(dt);
+  if(unstickRequested){tryUnstick();unstickRequested=false;}
   if(!dragging()&&!S.tilt){
     const idleDamp=intro?.92:.975;
     for(let i=1;i<P.length;i++)P[i].v.multiplyScalar(idleDamp);
