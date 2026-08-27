@@ -119,7 +119,7 @@
   <span>Two fingers, or shift-drag, to move it</span>
 </div>
 
-<button class="fab" id="tilt">Tilt on</button>
+<button class="fab" id="tilt" aria-pressed="false">Tilt off</button>
 <button class="fab" id="reset">Reset</button>
 <button class="fab" id="shutter" aria-label="Take a photo">SNAP<i>찰칵</i></button>
 
@@ -1013,7 +1013,9 @@ function syncMeshes(dt){
    INPUT — drag rotates, two fingers / shift / right-drag translates
    =================================================================== */
 let yaw=0,pitch=0,yawV=0,pitchV=0;
-let tiltYaw=0,tiltPitch=0;
+const tiltQuat=new Q(),tiltOffset=new Q(),tiltCorrection=new Q(-Math.SQRT1_2,0,0,Math.SQRT1_2);
+const tiltScreenQuat=new Q(),tiltEuler=new THREE.Euler(),tiltZee=new V3(0,0,1);
+let tiltReady=false,tiltListening=false;
 let zoom=1,pinchStart=0,pinchZoom=1;
 const phoneTarget=new V3(0,.04,0);
 phone.position.copy(phoneTarget);
@@ -1114,23 +1116,34 @@ const needsPerm=typeof DeviceOrientationEvent!=="undefined"&&
   typeof DeviceOrientationEvent.requestPermission==="function";
 if(needsPerm||"ondeviceorientation" in window) tiltBtn.style.display="block";
 function startTilt(){
+  if(tiltListening)return;
+  tiltListening=true;
   window.addEventListener("deviceorientation",function(ev){
     if(!S.tilt)return;
     const g=MU.clamp((ev.gamma||0)/45,-1,1), b=MU.clamp(((ev.beta||0)-40)/60,-1,1);
-    tiltYaw=g*.92;tiltPitch=b*.72;
+    tiltEuler.set((ev.beta||0)*Math.PI/180,(ev.alpha||0)*Math.PI/180,
+      -(ev.gamma||0)*Math.PI/180,"YXZ");
+    tiltQuat.setFromEuler(tiltEuler).multiply(tiltCorrection);
+    const screenAngle=((screen.orientation&&screen.orientation.angle)||window.orientation||0)*Math.PI/180;
+    tiltScreenQuat.setFromAxisAngle(tiltZee,-screenAngle);
+    tiltQuat.multiply(tiltScreenQuat);
+    if(!tiltReady){tiltOffset.copy(tiltQuat).invert();tiltReady=true;}
     _g.set(g*GRAVITY*.75,-GRAVITY*Math.sqrt(Math.max(.15,1-g*g*.5)),b*GRAVITY*.30);
   },true);
 }
 tiltBtn.addEventListener("click",function(){
-  if(S.tilt){S.tilt=false;tiltYaw=0;tiltPitch=0;_g.set(0,-GRAVITY,0);tiltBtn.textContent="Tilt on";return;}
+  if(S.tilt){S.tilt=false;tiltReady=false;_g.set(0,-GRAVITY,0);
+    tiltBtn.textContent="Tilt off";tiltBtn.setAttribute("aria-pressed","false");return;}
   if(needsPerm){
     DeviceOrientationEvent.requestPermission().then(function(r){
       if(r!=="granted")return;
-      S.tilt=true;intro=false;startTilt();tiltBtn.textContent="Tilt off";hintEl.classList.add("gone");
+      S.tilt=true;intro=false;startTilt();tiltBtn.textContent="Tilt on";
+      tiltBtn.setAttribute("aria-pressed","true");hintEl.classList.add("gone");
     })["catch"](function(){});
     return;
   }
-  S.tilt=true;intro=false;startTilt();tiltBtn.textContent="Tilt off";hintEl.classList.add("gone");
+  S.tilt=true;intro=false;startTilt();tiltBtn.textContent="Tilt on";
+  tiltBtn.setAttribute("aria-pressed","true");hintEl.classList.add("gone");
 });
 
 /* ===================================================================
@@ -1278,8 +1291,6 @@ function frame(now){
     phoneTarget.y=.04+Math.sin(t*1.8)*.030*introFade;
     if(t>5.6) intro=false;
   } else if(S.tilt&&mode===null){
-    yaw += (tiltYaw-yaw)*(1-Math.pow(.0004,dt));
-    pitch += (tiltPitch-pitch)*(1-Math.pow(.0004,dt));
     yawV=0;pitchV=0;
   } else if(mode!=="spin"){
     // flick momentum, then a slow settle back toward the hero pose
@@ -1295,7 +1306,8 @@ function frame(now){
   prevPhonePos.copy(phone.position);prevPhoneQ.copy(phone.quaternion);
   phone.position.lerp(phoneTarget,1-Math.pow(0.0008,dt));
   dragE.set(pitch,yaw,0,"YXZ");dragQ.setFromEuler(dragE);
-  wantQ.copy(dragQ).multiply(baseQuat);
+  if(S.tilt&&tiltReady)wantQ.copy(tiltQuat).multiply(tiltOffset).multiply(baseQuat);
+  else wantQ.copy(dragQ).multiply(baseQuat);
   phone.quaternion.slerp(wantQ,1-Math.pow(0.00004,dt));
 
   // substep interpolation targets + kinematic velocities for contact friction
