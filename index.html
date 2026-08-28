@@ -27,21 +27,19 @@
   .wordmark{display:inline-block;font-size:27px;font-weight:800;letter-spacing:-.045em;line-height:1;
     background:linear-gradient(178deg,#FFFFFF 0%,#EAEAF2 26%,#9E9EB2 48%,#F7F7FC 54%,#C6C6D6 74%,#FFFFFF 100%);
     -webkit-background-clip:text;background-clip:text;color:transparent;
-    filter:drop-shadow(0 1px 0 rgba(0,0,0,.45)) drop-shadow(0 4px 14px rgba(0,0,0,.35));}
+    filter:drop-shadow(0 1px 0 rgba(0,0,0,.85)) drop-shadow(0 2px 3px rgba(0,0,0,.55))
+           drop-shadow(0 6px 18px rgba(0,0,0,.5));}
   .sub{display:block;margin-top:4px;font-size:9px;font-weight:700;letter-spacing:.42em;
-    color:#DCDCE6;opacity:.6;text-transform:uppercase;}
-  #bgSwatches{position:fixed;top:calc(env(safe-area-inset-top) + 54px);right:20px;z-index:6;
-    display:flex;gap:8px;padding:7px 9px;border:1px solid rgba(255,255,255,.45);
-    border-radius:999px;background:rgba(35,34,43,.34);backdrop-filter:blur(12px);}
-  .bgSw{width:24px;height:24px;border:2px solid rgba(20,18,26,.85);border-radius:50%;
-    padding:0;cursor:pointer;box-shadow:0 2px 0 rgba(20,18,26,.75),inset 0 1px 1px rgba(255,255,255,.8);
-    transition:transform .12s cubic-bezier(.3,1.6,.5,1),box-shadow .12s;}
-  .bgSw:active{transform:translateY(2px);box-shadow:0 0 0 rgba(20,18,26,.75);}
-  .bgSw[aria-pressed="true"]{outline:2px solid #fff;outline-offset:2px;}
+    color:#EEEEF4;opacity:.85;text-transform:uppercase;
+    text-shadow:0 1px 4px rgba(0,0,0,.75);}
+  /* Background color, Reflections, and Backdrop style used to live here as
+     three separate floating pill rows -- by the time a fourth preset group
+     was added the corner was an unreadable stack of near-identical circles.
+     All three now live in the tray's Scene tab instead, using the same
+     chip/swatch styling as every other option group, with the tray's usual
+     scroll and label conventions instead of unlabeled floating dots. */
   @media (max-width:520px){
     #langSwitch{top:calc(env(safe-area-inset-top) + 12px);right:12px;}
-    #bgSwatches{top:calc(env(safe-area-inset-top) + 48px);right:12px;gap:6px;padding:6px 8px;}
-    .bgSw{width:21px;height:21px;}
     .langBtn{padding:4px 7px;font-size:9.5px;}
     /* "ENG / 中文 / 日本語" is wider than the old "EN / 中 / 日", so at narrow
        widths give it room by shrinking the wordmark rather than letting the
@@ -53,21 +51,22 @@
     .wordmark{font-size:16px;}
   }
   .hint{position:fixed;top:calc(env(safe-area-inset-top) + 76px);left:20px;z-index:5;
-    font-size:11px;font-weight:600;color:#EAEAF2;opacity:.62;pointer-events:none;
-    transition:opacity .6s ease;text-shadow:0 1px 6px rgba(0,0,0,.6);line-height:1.5;}
+    font-size:11px;font-weight:600;color:#F4F4F8;opacity:.92;pointer-events:none;
+    transition:opacity .6s ease;text-shadow:0 1px 3px rgba(0,0,0,.85),0 2px 10px rgba(0,0,0,.6);
+    line-height:1.5;}
   .hint.gone{opacity:0;}
   .hint b{font-weight:700;color:var(--mint);}
   .hint span{opacity:.62;}
 
   #tray{position:fixed;left:0;right:0;bottom:0;z-index:5;
     padding:10px 10px calc(env(safe-area-inset-bottom) + 10px);
-    background:linear-gradient(to top,rgba(26,24,34,.94) 44%,rgba(26,24,34,0));}
+    background:linear-gradient(to top,rgba(14,13,19,.97) 40%,rgba(14,13,19,.86) 68%,rgba(14,13,19,0));}
   #tabs{display:flex;gap:5px;overflow-x:auto;scrollbar-width:none;padding:2px 2px 9px;}
   #tabs::-webkit-scrollbar{display:none;}
   .tab{flex:0 0 auto;cursor:pointer;border:0;background:none;padding:5px 3px 6px;
-    font:inherit;color:#9D9DB0;text-align:center;min-width:56px;}
+    font:inherit;color:#C3C4D2;text-align:center;min-width:56px;}
   .tab .en{display:block;font-size:12px;font-weight:800;}
-  .tab .ko{display:block;font-size:8px;font-weight:600;letter-spacing:.08em;opacity:.55;margin-top:2px;}
+  .tab .ko{display:block;font-size:8px;font-weight:600;letter-spacing:.08em;opacity:.72;margin-top:2px;}
   .tab[aria-selected="true"]{color:#fff;}
   .tab[aria-selected="true"] .en{background:linear-gradient(180deg,#FFF 0%,#D6D6E4 52%,#FFF 100%);
     -webkit-background-clip:text;background-clip:text;color:transparent;}
@@ -88,6 +87,8 @@
   .langBtn[aria-pressed="true"]{background:linear-gradient(180deg,#FF7FB0 0%,var(--pink) 52%,#FF9AC2 100%);color:#fff;}
   #row2:empty{display:none;}
   #row2{display:flex;align-items:center;gap:10px;padding:2px 4px 4px;}
+  #row3:empty{display:none;}
+  #row3{display:flex;align-items:center;gap:10px;padding:2px 4px 4px;flex-wrap:wrap;}
   .sldlab{flex:0 0 auto;font-size:11px;font-weight:800;color:#E4E4EE;letter-spacing:-.01em;}
   .sldlab .ko{font-size:8px;font-weight:600;opacity:.5;margin-left:3px;}
   .sldval{flex:0 0 auto;min-width:34px;text-align:right;font-size:11px;font-weight:700;
@@ -160,7 +161,6 @@
   <span class="sub">말랑참 · <span id="subTag">design &amp; swing</span></span>
 </header>
 <div id="langSwitch" role="group" aria-label="Language"></div>
-<div id="bgSwatches" role="group" aria-label="Background color"></div>
 <div class="hint" id="hint">
   <span id="hint1">Drag to spin the phone</span> <b>·</b> <span id="hint1b">flick it and let go</span><br>
   <span id="hint2">Two fingers, or shift-drag, to move it</span>
@@ -170,10 +170,10 @@
 <button class="fab" id="reset">Reset</button>
 <button class="fab" id="shutter" aria-label="Take a photo"><span id="snapLabel">SNAP</span><i>찰칵</i></button>
 
-<div id="tray"><div id="tabs" role="tablist"></div><div id="row"></div><div id="row2"></div></div>
+<div id="tray"><div id="tabs" role="tablist"></div><div id="row"></div><div id="row2"></div><div id="row3"></div></div>
 <div id="flash"></div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
 <script>
 (function(){
 "use strict";
@@ -191,13 +191,16 @@ const CHARM_MASS_SCALE = .1;
 /* ===================================================================
    CONTENT
    =================================================================== */
+// trans: real transmission amount (0 = fully opaque, replaces the old
+// alpha-based opacity for how see-through each swatch reads). Chrome stays
+// at 0 since it's metal, not glass -- transmission has no meaning there.
 const CASES=[
-  {n:"Clear",  zh:"透明",   ja:"クリア",     hex:0xF2F4FA, opacity:0.24, metal:0.0, rough:0.03, env:2.2},
-  {n:"Milk",   zh:"牛奶白", ja:"ミルク",     hex:0xFBF3EA, opacity:0.80, metal:0.0, rough:0.16, env:1.3},
-  {n:"Bubble", zh:"泡泡糖", ja:"バブルガム", hex:0xFF9CC0, opacity:0.62, metal:0.0, rough:0.08, env:1.7},
-  {n:"Mint",   zh:"薄荷",   ja:"ミント",     hex:0x8FEFDD, opacity:0.62, metal:0.0, rough:0.08, env:1.7},
-  {n:"Lilac",  zh:"淡紫",   ja:"ライラック", hex:0xBFA9FF, opacity:0.62, metal:0.0, rough:0.08, env:1.7},
-  {n:"Chrome", zh:"镀铬",   ja:"クローム",   hex:0xEFEFF6, opacity:1.00, metal:1.0, rough:0.05, env:2.6},
+  {n:"Clear",  zh:"透明",   ja:"クリア",     hex:0xF8FAFF, trans:0.92, metal:0.0, rough:0.026, env:2.4},
+  {n:"Milk",   zh:"牛奶白", ja:"ミルク",     hex:0xFBF3EA, trans:0.16, metal:0.0, rough:0.16,  env:1.3},
+  {n:"Bubble", zh:"泡泡糖", ja:"バブルガム", hex:0xFF9CC0, trans:0.55, metal:0.0, rough:0.05,  env:1.9},
+  {n:"Mint",   zh:"薄荷",   ja:"ミント",     hex:0x8FEFDD, trans:0.55, metal:0.0, rough:0.05,  env:1.9},
+  {n:"Lilac",  zh:"淡紫",   ja:"ライラック", hex:0xBFA9FF, trans:0.55, metal:0.0, rough:0.05,  env:1.9},
+  {n:"Chrome", zh:"镀铬",   ja:"クローム",   hex:0xEFEFF6, trans:0.0,  metal:1.0, rough:0.05,  env:2.6},
 ];
 // volFactor: fraction of the bounding box the shape actually fills.
 // densityMul: metal frame is a zinc-alloy shell, far denser than acrylic.
@@ -213,15 +216,19 @@ const SHAPES=[
 ];
 // density in g/cm^3 (real values). restitution/friction are contact properties.
 const MATERIALS=[
+  // transmission/attenuation replace the old opacity-based fake transparency.
+  // acrylic: clearest, sharpest. jelly: softer/frostier, more saturated color
+  // for the same thickness (shorter attenuationDistance). glitter: the
+  // flakes scatter light, so it's the least see-through of the three.
   {k:"acrylic",n:"Acrylic",ko:"아크릴", zh:"亚克力",ja:"アクリル", density:1.19, restitution:.06, friction:.45,
    angDamp:.85, linDamp:.18, jointFric:.10, squash:0,
-   opacity:.86,rough:.06,cc:1,ccr:.03,env:1.6,sparkle:0,metalTone:0xE6E6EE},
+   transmission:1.0,attnDist:.20,rough:.028,cc:1,ccr:.024,env:2.4,sparkle:0,metalTone:0xE6E6EE},
   {k:"jelly",  n:"Jelly",  ko:"젤리",   zh:"果冻",  ja:"ゼリー",   density:1.15, restitution:.10, friction:.95,
    angDamp:1.5, linDamp:.32, jointFric:.16, squash:1,
-   opacity:.70,rough:.20,cc:1,ccr:.16,env:1.2,sparkle:0,metalTone:0xE8B9A6},
+   transmission:.88,attnDist:.09,rough:.13,cc:1,ccr:.09,env:1.8,sparkle:0,metalTone:0xE8B9A6},
   {k:"glitter",n:"Glitter",ko:"글리터", zh:"闪粉",  ja:"グリッター",density:1.62, restitution:.05, friction:.42,
    angDamp:.70, linDamp:.14, jointFric:.08, squash:0,
-   opacity:.95,rough:.30,cc:1,ccr:.10,env:2.0,sparkle:1,metalTone:0xE3C079},
+   transmission:.45,attnDist:.10,rough:.22,cc:1,ccr:.12,env:2.2,sparkle:1,metalTone:0xE3C079},
 ];
 const COLORS=[
   {n:"Peach",zh:"蜜桃",ja:"ピーチ",hex:0xFFB7AB},{n:"Pink",zh:"粉色",ja:"ピンク",hex:0xFF5D93},
@@ -229,9 +236,9 @@ const COLORS=[
   {n:"Lilac",zh:"淡紫",ja:"ライラック",hex:0xC4B2FF},{n:"Milk",zh:"牛奶白",ja:"ミルク",hex:0xF6EBDD},
 ];
 const BG_COLORS=[
-  {n:"Pearl",zh:"珍珠灰",ja:"パール",hex:0xB1B2B8},{n:"Silver",zh:"银色",ja:"シルバー",hex:0x94969E},
-  {n:"Chrome",zh:"镀铬",ja:"クローム",hex:0x737580},{n:"Smoke",zh:"烟灰",ja:"スモーク",hex:0x575A63},
-  {n:"Blue gray",zh:"蓝灰",ja:"ブルーグレー",hex:0x181A20},
+  {n:"Mist",zh:"雾灰",ja:"ミスト",hex:0x8E8F99},{n:"Slate",zh:"石板",ja:"スレート",hex:0x63656F},
+  {n:"Dusk",zh:"暮色",ja:"ダスク",hex:0x45464F},{n:"Ink",zh:"墨色",ja:"インク",hex:0x2C2D35},
+  {n:"Noir",zh:"黑色",ja:"ノワール",hex:0x15161B},
 ];
 const HOOKS=[
   {n:"Ring",ko:"링",zh:"圆环",ja:"リング",k:"ring"},
@@ -267,19 +274,22 @@ const I18N={
       hint2:"Two fingers, or shift-drag, to move it",
       tiltOn:"Tilt on",tiltOff:"Tilt off",reset:"Reset",snap:"SNAP",length:"Length",
       takePhoto:"Take a photo",chainLength:"Chain length",
-      bgColor:"Background color",bgSuffix:" background"},
+      bgColor:"Background color",bgSuffix:" background",reflectionSuffix:" reflections",backdropSuffix:" backdrop",
+      reflectionsLabel:"Reflections",backdropLabel:"Backdrop"},
   zh:{tagline:"设计与摇摆",
       hint1:"拖动手机旋转",hint1b:"轻甩后松开",
       hint2:"双指或按住 Shift 拖动可移动位置",
       tiltOn:"倾斜开启",tiltOff:"倾斜关闭",reset:"重置",snap:"拍照",length:"长度",
       takePhoto:"拍照",chainLength:"链长",
-      bgColor:"背景颜色",bgSuffix:" 背景"},
+      bgColor:"背景颜色",bgSuffix:" 背景",reflectionSuffix:" 反射",backdropSuffix:" 背景样式",
+      reflectionsLabel:"反射",backdropLabel:"背景样式"},
   ja:{tagline:"デザイン＆スイング",
       hint1:"ドラッグしてスマホを回す",hint1b:"はじいて手を離す",
       hint2:"二本指、またはShift+ドラッグで移動",
       tiltOn:"傾き ON",tiltOff:"傾き OFF",reset:"リセット",snap:"撮影",length:"長さ",
       takePhoto:"写真を撮る",chainLength:"チェーンの長さ",
-      bgColor:"背景色",bgSuffix:" 背景"},
+      bgColor:"背景色",bgSuffix:" 背景",reflectionSuffix:" 反射",backdropSuffix:" 背景スタイル",
+      reflectionsLabel:"反射",backdropLabel:"背景スタイル"},
 };
 function T(k){return I18N[S.lang][k];}
 const ELEM={
@@ -341,7 +351,7 @@ const ART={
       g.strokeStyle="rgba(36,30,40,.35)";g.lineWidth=4;g.stroke();});},
 };
 const ART_KEYS=Object.keys(ART);
-const S={lang:"en",linkLen:.040,caseI:0,shapeI:1,mat:0,color:1,strand:0,art:4,hook:1,hookColor:1,bg:2,tilt:false};
+const S={lang:"en",linkLen:.040,caseI:0,shapeI:1,mat:0,color:1,strand:0,art:4,hook:1,hookColor:1,bg:2,env:0,backdrop:0,tilt:false};
 function SH(){return SHAPES[S.shapeI];}
 function MT(){return MATERIALS[S.mat];}
 function ST(){return STRANDS[S.strand];}
@@ -360,7 +370,50 @@ renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
 const scene=new THREE.Scene();
 const camera=new THREE.PerspectiveCamera(30,1,0.1,100);
 
-function backdropTex(){
+function backdropTexNew(){
+  const N=1024,cv=document.createElement("canvas");cv.width=cv.height=N;const g=cv.getContext("2d");
+  // Darker ramp than before. A pale charm needs somewhere dark to read
+  // against; the old near-white centre was the main reason light products
+  // disappeared into the background.
+  const r=g.createRadialGradient(N*.46,N*.40,30,N*.46,N*.40,N*.74);
+  r.addColorStop(0,"#7E808C");r.addColorStop(.38,"#5A5C68");
+  r.addColorStop(.74,"#34353E");r.addColorStop(1,"#1A1B21");
+  g.fillStyle=r;g.fillRect(0,0,N,N);
+  // Iridescent sweep, pushed from ~12% to ~22% alpha. At the old value it
+  // averaged into flat gray at this magnification and the Y2K character
+  // that was supposed to be here simply vanished.
+  const cs=g.createLinearGradient(0,N*.26,0,N*.66);
+  cs.addColorStop(0,"rgba(255,255,255,0)");cs.addColorStop(.28,"rgba(150,190,255,.20)");
+  cs.addColorStop(.46,"rgba(255,255,255,.26)");cs.addColorStop(.62,"rgba(255,150,205,.20)");
+  cs.addColorStop(1,"rgba(255,255,255,0)");
+  g.fillStyle=cs;g.fillRect(0,0,N,N);
+  [["#6FC8FF",.22,N*.18,N*.74,300],["#FF8AC8",.20,N*.82,N*.24,330],["#B79CFF",.18,N*.74,N*.82,270]]
+    .forEach(function(p){const q=g.createRadialGradient(p[2],p[3],0,p[2],p[3],p[4]);
+      q.addColorStop(0,p[0]);q.addColorStop(1,"rgba(0,0,0,0)");
+      g.globalAlpha=p[1];g.fillStyle=q;g.fillRect(0,0,N,N);g.globalAlpha=1;});
+  // Sparkles on a jittered grid rather than pure random: the old
+  // Math.random() scatter clumped in places and left dead patches, and the
+  // size range was so wide some read as blobs. Grid + jitter keeps them
+  // even, and the centre is kept clear so they never sit on the product.
+  const cols=7,rows=9;
+  for(let iy=0;iy<rows;iy++)for(let ix=0;ix<cols;ix++){
+    const cx=(ix+.5)/cols, cy=(iy+.5)/rows;
+    const dx=cx-.46, dy=cy-.44;
+    if(Math.sqrt(dx*dx+dy*dy)<.20) continue;      // keep the hero area clean
+    if(Math.random()<.30) continue;               // thin them out irregularly
+    const x=(cx+(Math.random()-.5)*.09)*N, y=(cy+(Math.random()-.5)*.09)*N;
+    const sp=7+Math.random()*11;
+    g.save();g.translate(x,y);g.globalAlpha=.22+Math.random()*.42;g.fillStyle="#fff";g.beginPath();
+    g.moveTo(0,-sp);g.quadraticCurveTo(sp*.13,-sp*.13,sp,0);g.quadraticCurveTo(sp*.13,sp*.13,0,sp);
+    g.quadraticCurveTo(-sp*.13,sp*.13,-sp,0);g.quadraticCurveTo(-sp*.13,-sp*.13,0,-sp);g.fill();g.restore();}
+  const t=new THREE.CanvasTexture(cv);t.encoding=THREE.sRGBEncoding;return t;
+}
+// The original recipe, kept verbatim as a selectable preset: lighter ramp,
+// softer iridescence, pure-random sparkle scatter. Paired with the wider
+// 24-unit plane it originally shipped on, since that size is part of how
+// it actually looked (softer, more magnified) -- swapping the texture but
+// keeping the new tighter plane would not reproduce the original look.
+function backdropTexClassic(){
   const N=1024,cv=document.createElement("canvas");cv.width=cv.height=N;const g=cv.getContext("2d");
   const r=g.createRadialGradient(N*.46,N*.42,30,N*.46,N*.42,N*.72);
   r.addColorStop(0,"#C3C3CE");r.addColorStop(.42,"#8C8C99");
@@ -376,49 +429,157 @@ function backdropTex(){
       q.addColorStop(0,p[0]);q.addColorStop(1,"rgba(0,0,0,0)");
       g.globalAlpha=p[1];g.fillStyle=q;g.fillRect(0,0,N,N);g.globalAlpha=1;});
   for(let i=0;i<70;i++){
-    const x=Math.random()*N,y=Math.random()*N,s=5+Math.random()*22;
+    const x=Math.random()*N,y=Math.random()*N,sp=5+Math.random()*22;
     g.save();g.translate(x,y);g.globalAlpha=.16+Math.random()*.5;g.fillStyle="#fff";g.beginPath();
-    g.moveTo(0,-s);g.quadraticCurveTo(s*.13,-s*.13,s,0);g.quadraticCurveTo(s*.13,s*.13,0,s);
-    g.quadraticCurveTo(-s*.13,s*.13,-s,0);g.quadraticCurveTo(-s*.13,-s*.13,0,-s);g.fill();g.restore();}
+    g.moveTo(0,-sp);g.quadraticCurveTo(sp*.13,-sp*.13,sp,0);g.quadraticCurveTo(sp*.13,sp*.13,0,sp);
+    g.quadraticCurveTo(-sp*.13,sp*.13,-sp,0);g.quadraticCurveTo(-sp*.13,-sp*.13,0,-sp);g.fill();g.restore();}
   const t=new THREE.CanvasTexture(cv);t.encoding=THREE.sRGBEncoding;return t;
 }
-const backdrop=new THREE.Mesh(new THREE.PlaneGeometry(24,24),
-  new THREE.MeshStandardMaterial({map:backdropTex(),roughness:.94,metalness:.06}));
-backdrop.position.z=-3.0;backdrop.receiveShadow=true;scene.add(backdrop);
+const BACKDROPS=[
+  {k:"new",    n:"New",     ko:"뉴",     zh:"新款",   ja:"ニュー",    build:backdropTexNew,     size:9},
+  {k:"classic",n:"Classic", ko:"클래식", zh:"经典",   ja:"クラシック",build:backdropTexClassic, size:24},
+];
+// 24 units on the classic recipe was ~6x magnification against a ~4-unit
+// view, which is what made it look soft -- kept as-is since that softness
+// is part of the original look. The new recipe's 9-unit plane lands much
+// closer to 1:1, which is why its sparkles and banding are crisp.
+const backdrop=new THREE.Mesh(new THREE.PlaneGeometry(1,1),
+  new THREE.MeshStandardMaterial({map:backdropTexNew(),roughness:.94,metalness:.06}));
+backdrop.position.z=-2.4;backdrop.receiveShadow=true;backdrop.scale.set(9,9,1);scene.add(backdrop);
+function applyBackdropStyle(){
+  const d=BACKDROPS[S.backdrop];
+  if(backdrop.material.map) backdrop.material.map.dispose();
+  backdrop.material.map=d.build();
+  backdrop.material.needsUpdate=true;
+  backdrop.scale.set(d.size,d.size,1);
+  // The contact shadow was tuned against the darker New backdrop. On the
+  // pale, soft Classic recipe that same dark blob reads as an unwanted
+  // smudge under the phone rather than a grounding cue, so it's off there.
+  contactShadow.visible=(d.k!=="classic");
+}
 function applyBackground(){
   backdrop.material.color.setHex(BG_COLORS[S.bg].hex);
   backdrop.material.needsUpdate=true;
 }
 
-function buildEnv(){
-  const s=new THREE.Scene();s.background=new THREE.Color(0x4A4A55);
+/* Contact shadow. The real cast shadow lands on a backdrop ~2.4 units behind
+   the phone, so it arrives soft and far away and the phone reads as floating
+   in fog. This is a cheap painted blob that sits just in front of the
+   backdrop and tracks the phone in XY, giving the eye an anchor and a depth
+   cue that the shadow map alone was not providing at this distance. */
+function blobTex(){
+  const N=256,cv=document.createElement("canvas");cv.width=cv.height=N;const g=cv.getContext("2d");
+  const q=g.createRadialGradient(N/2,N/2,0,N/2,N/2,N/2);
+  q.addColorStop(0,"rgba(0,0,0,.62)");q.addColorStop(.45,"rgba(0,0,0,.30)");
+  q.addColorStop(.78,"rgba(0,0,0,.08)");q.addColorStop(1,"rgba(0,0,0,0)");
+  g.fillStyle=q;g.fillRect(0,0,N,N);
+  return new THREE.CanvasTexture(cv);
+}
+const contactShadow=new THREE.Mesh(new THREE.PlaneGeometry(1,1),
+  new THREE.MeshBasicMaterial({map:blobTex(),transparent:true,depthWrite:false,opacity:.85}));
+contactShadow.position.z=backdrop.position.z+.05;
+contactShadow.renderOrder=-1;
+scene.add(contactShadow);
+function updateContactShadow(){
+  // Follows the phone, offset down-right to match the key light direction,
+  // and swells slightly as the phone moves away from the backdrop.
+  contactShadow.position.x=phone.position.x*.82+.16;
+  contactShadow.position.y=phone.position.y*.82-.34;
+  contactShadow.scale.set(2.9,3.4,1);
+}
+
+// contrast: true adds real black into the environment. A transmissive or
+// reflective material can only ever show colors that exist SOMEWHERE in
+// scene.environment -- a brighter/dimmer version of the same mid-gray box
+// still has no true black to sample, no matter how the material itself is
+// tuned. Black flags placed next to the bright panels give reflections
+// somewhere to actually go dark, which is what reads as punchy glass
+// instead of soft plastic.
+function buildEnv(contrast){
+  const s=new THREE.Scene();s.background=new THREE.Color(contrast?0x08080A:0x3E3E48);
   s.add(new THREE.Mesh(new THREE.BoxGeometry(14,14,14),
-    new THREE.MeshBasicMaterial({color:0x55555F,side:THREE.BackSide})));
+    new THREE.MeshBasicMaterial({color:contrast?0x050506:0x4A4A55,side:THREE.BackSide})));
   function panel(w,h,col,int,pos,rot){
     const m=new THREE.Mesh(new THREE.PlaneGeometry(w,h),
       new THREE.MeshBasicMaterial({color:new THREE.Color(col).multiplyScalar(int)}));
     m.position.set(pos[0],pos[1],pos[2]);
     if(rot)m.rotation.set(rot[0],rot[1],rot[2]);s.add(m);
   }
-  panel(7,4,0xFFF6EC,5.4,[1.2,3.4,1.6],[Math.PI/2,0,0]);
-  panel(3,6,0xBBD8FF,2.4,[-5.6,.6,.4],[0,Math.PI/2,0]);
-  panel(3.4,4,0xFFC3DC,2.0,[5.6,-.4,-.6],[0,-Math.PI/2,0]);
-  panel(2.2,2.2,0x9CFFE8,1.7,[-2.6,-2.2,4.2],null);
-  panel(2.2,2.2,0xFFE49C,1.6,[3.0,1.6,4.4],null);
-  panel(8,4,0x3A3A44,1.0,[0,-4.4,0],[-Math.PI/2,0,0]);
+  function flag(w,h,pos,rot){panel(w,h,0x000000,0,pos,rot);}
+  // broad fill -- softens shadows, does NOT drive the sharp highlights.
+  // Slightly dimmed in contrast mode so the black flags next to them read
+  // as a real drop, not just a softer version of the same brightness.
+  const k=contrast?0.86:1;
+  panel(7,4,0xFFF8F0,6.2*k,[1.2,3.4,1.6],[Math.PI/2,0,0]);
+  panel(3,6,0xC6E0FF,2.8*k,[-5.6,.6,.4],[0,Math.PI/2,0]);
+  panel(3.4,4,0xFFC9DE,2.4*k,[5.6,-.4,-.6],[0,-Math.PI/2,0]);
+  panel(2.2,2.2,0x9CFFE8,2.0*k,[-2.6,-2.2,4.2],null);
+  panel(2.2,2.2,0xFFE49C,1.9*k,[3.0,1.6,4.4],null);
+  panel(8,4,0x33333C,1.0,[0,-4.4,0],[-Math.PI/2,0,0]);
+  // small, hot glints -- this is what a real glossy/acrylic surface shows as
+  // bright streaks rather than a broad soft sheen. A single ring only sweeps
+  // ONE elevation, which is enough for a curved bevel (its normal sweeps
+  // through many directions across a small area) but not for a flat wall,
+  // like the keycap bed's sides: a flat surface has one fixed normal, so
+  // unless a hotspot happens to sit in exactly that direction it reflects
+  // nothing. A light tent -- several elevation bands, not just one -- covers
+  // enough of the sphere that some panel lands in a flat wall's mirror
+  // direction too, the way a real product-photo tent surrounds the subject.
+  const glintR=3.6;
+  [0.75,0.30,-0.20,-0.65].forEach(function(elevSin,ring){
+    const y=elevSin*glintR, rXZ=Math.sqrt(Math.max(0,1-elevSin*elevSin))*glintR;
+    const n=8, offset=(ring%2)*(Math.PI/n);
+    for(let i=0;i<n;i++){
+      const a=i/n*Math.PI*2+offset;
+      panel(.6,.85,0xFFFFFF,(9+((i+ring)%3)*2)*(contrast?1.15:1),
+        [Math.cos(a)*rXZ,y+1.0,Math.sin(a)*rXZ],[0,-a,0]);
+    }
+  });
+  if(contrast){
+    // black flags: real absence of light right next to each bright source,
+    // so a curved surface sweeps from hot highlight straight into true
+    // black across a small area -- that transition is what "contrast" and
+    // "sharp" actually mean here, not just a darker overall scene. Sized to
+    // sit close to their paired panel rather than looming over the whole
+    // scene: a flag big enough to blank out every bright source from a
+    // small part's point of view doesn't add contrast, it just erases the
+    // part (this is what first happened to the small metal charms -- they
+    // went fully black with no highlight left at all, since every direction
+    // they could reflect from was covered by a flag).
+    flag(4.5,1.7,[1.2,1.55,1.6],[Math.PI/2,0,0]);
+    flag(1.3,4,[-3.55,.6,.4],[0,Math.PI/2,0]);
+    flag(1.5,2.6,[3.65,-.4,-.6],[0,-Math.PI/2,0]);
+    flag(1.8,1.8,[0,3.45,-1.5],[Math.PI/2,0,0]);
+    flag(2.6,2.6,[0,-1,-3.3],null);
+    flag(1.1,1.1,[-2.55,-2.1,2.9],null);
+    flag(1.1,1.1,[2.95,1.45,3.2],null);
+  }
   return s;
 }
+const REFLECTIONS=[
+  {k:"soft",    n:"Soft",     ko:"소프트",   zh:"柔和",    ja:"ソフト",       contrast:false},
+  {k:"contrast",n:"Contrast", ko:"고대비",   zh:"高对比",  ja:"コントラスト", contrast:true},
+];
 const pmrem=new THREE.PMREMGenerator(renderer);pmrem.compileEquirectangularShader();
-scene.environment=pmrem.fromScene(buildEnv(),0.035,0.1,60).texture;
+let envRT=null;
+// lower sigma than before: less pre-blur means the small glints above stay
+// crisp points instead of smearing into the same soft glow as the fill.
+function applyEnvironment(){
+  const rt=pmrem.fromScene(buildEnv(REFLECTIONS[S.env].contrast),0.008,0.1,60);
+  scene.environment=rt.texture;
+  if(envRT) envRT.dispose();
+  envRT=rt;
+}
+applyEnvironment();
 
-const key=new THREE.DirectionalLight(0xFFF3E4,1.30);
+const key=new THREE.DirectionalLight(0xFFF3E4,1.55);
 key.position.set(2.6,3.6,3.4);key.castShadow=true;
 key.shadow.mapSize.set(1024,1024);key.shadow.radius=4;key.shadow.bias=-.0013;
 key.shadow.camera.left=-3;key.shadow.camera.right=3;
 key.shadow.camera.top=3;key.shadow.camera.bottom=-3;
 key.shadow.camera.near=.5;key.shadow.camera.far=15;
 scene.add(key);
-scene.add(new THREE.HemisphereLight(0xD6D6E4,0x3A3A44,.34));
+scene.add(new THREE.HemisphereLight(0xD6D6E4,0x33333C,.26));
 
 function sparkTex(){
   const N=128,cv=document.createElement("canvas");cv.width=cv.height=N;const g=cv.getContext("2d");
@@ -513,6 +674,27 @@ function sakuraShape(R,n){
   }
   s.closePath();return s;
 }
+// One bow loop, drawn from the knot (origin) ballooning out to a rounded tip
+// and tapering back. Mirrored via scale.x=-1 for the other side. The old
+// ribbon charm used two rotated hearts here, which read as hearts, not a
+// bow -- this is an actual loop silhouette.
+function ribbonLoopShape(w,h){
+  const s=new THREE.Shape();
+  s.moveTo(0,0);
+  s.bezierCurveTo(w*.18,h*.62, w*.92,h*.86, w,h*.10);
+  s.bezierCurveTo(w*.90,-h*.34, w*.30,-h*.40, 0,0);
+  return s;
+}
+// A hanging ribbon tail with the classic V-notch cut at the loose end --
+// this notch is the single detail that reads as "ribbon" rather than
+// "flat tab" at a glance, and the original charm had no tails at all.
+function ribbonTailShape(w,len){
+  const s=new THREE.Shape();
+  s.moveTo(-w/2,0);s.lineTo(w/2,0);
+  s.lineTo(w*.42,-len*.86);s.lineTo(0,-len*.62);s.lineTo(-w*.42,-len*.86);
+  s.closePath();
+  return s;
+}
 function extrude(shape,depth,bevel,seg){
   const g=new THREE.ExtrudeGeometry(shape,{depth:Math.max(.004,depth-bevel*2),
     bevelEnabled:true,bevelThickness:bevel,bevelSize:bevel,bevelSegments:5,curveSegments:seg||22});
@@ -542,16 +724,42 @@ const matIrid=new THREE.MeshPhysicalMaterial({color:0xFFF2FA,transparent:true,op
 const matBead=new THREE.MeshPhysicalMaterial({color:0xFFB7D2,transparent:true,opacity:.62,
   roughness:.05,metalness:0,clearcoat:1,clearcoatRoughness:.03,envMapIntensity:1.8,depthWrite:false});
 const matCord=new THREE.MeshStandardMaterial({color:0xFFD3E2,roughness:.72,metalness:.04});
+// small solid dark eyes (bunny) -- a glossy near-black, matching the thick
+// ink outline used throughout the 2D character art elsewhere in the app.
+const matInk=new THREE.MeshPhysicalMaterial({color:0x241E28,roughness:.25,metalness:0,
+  clearcoat:1,clearcoatRoughness:.15,envMapIntensity:1.4});
 /* keycap: moulded PBT, semi-matte with a faint sheen. keybed: thick clear
    acrylic, low roughness and high env so the bevelled edges catch light. */
 const matKeycap=new THREE.MeshPhysicalMaterial({color:0xFFF5E9,roughness:.32,metalness:.02,
   clearcoat:.5,clearcoatRoughness:.32,envMapIntensity:1.15});
-const matKeybed=new THREE.MeshPhysicalMaterial({color:0xF4F7FF,transparent:true,opacity:.30,
-  roughness:.02,metalness:0,clearcoat:1,clearcoatRoughness:.02,envMapIntensity:2.7,
-  side:THREE.DoubleSide,depthWrite:false});
-const matAcrylic=new THREE.MeshPhysicalMaterial({color:COLORS[1].hex,transparent:true,opacity:.86,
-  roughness:.06,metalness:0,clearcoat:1,clearcoatRoughness:.03,envMapIntensity:1.6,
-  side:THREE.DoubleSide,depthWrite:false});
+// FrontSide, not DoubleSide: the keybed is a HOLLOW extruded frame (walls
+// around a cavity), so from most angles the camera looks through the near
+// outer wall, the near inner wall, the far inner wall, AND the far outer
+// wall all at once. Four stacked alpha layers of the same tint is what was
+// actually making it look like flat milky fog, no matter how the material
+// itself was tuned -- it was a geometry/compositing problem, not a
+// lighting one. FrontSide halves that stack so a highlight isn't buried
+// under three more layers of the same translucent haze.
+// Real transmission, not alpha blending. transparent:false + depthWrite:true
+// matters here: transmission is not the same rendering path as alpha, and
+// leaving the old alpha-material flags on produces broken results (this is
+// what caused the artifact from the first attempt). thickness is sized to
+// the riser's actual cross-section (~15-20% of its width), not to the whole
+// pendant -- too large a thickness smears the refraction into soft ghosting
+// instead of a crisp "looking through glass" effect.
+const matKeybed=new THREE.MeshPhysicalMaterial({color:0xFAFBFF,
+  roughness:.028,metalness:0,
+  transmission:1.0,thickness:.048,ior:1.55,
+  clearcoat:1,clearcoatRoughness:.028,
+  envMapIntensity:2.6,side:THREE.FrontSide,
+  transparent:false,depthWrite:true});
+const matAcrylic=new THREE.MeshPhysicalMaterial({color:0xFAFBFF,
+  roughness:.032,metalness:0,
+  transmission:1.0,thickness:.05,ior:1.55,
+  attenuationColor:new THREE.Color(COLORS[1].hex),attenuationDistance:.16,
+  clearcoat:1,clearcoatRoughness:.024,
+  envMapIntensity:2.4,side:THREE.FrontSide,
+  transparent:false,depthWrite:true});
 const matMatte=new THREE.MeshStandardMaterial({color:0xFF9CBE,roughness:.62,metalness:.02});
 const artCv=document.createElement("canvas");artCv.width=artCv.height=512;
 const artG=artCv.getContext("2d");
@@ -632,9 +840,18 @@ function caseRimGeometry(){
   s.holes.push(new THREE.Path(roundRectPoints(PH.w+.012,PH.h+.012,.145,44,0,0)));
   return extrude(s,.14,.012,26);
 }
-const caseMat=new THREE.MeshPhysicalMaterial({color:0xF2F4FA,transparent:true,opacity:.24,
-  roughness:.045,metalness:0,clearcoat:1,clearcoatRoughness:.025,reflectivity:.9,envMapIntensity:2.6,
-  side:THREE.DoubleSide,depthWrite:false});
+// Same reasoning as matKeybed: caseRim is a hollow frame around the phone's
+// edge, so DoubleSide meant stacking the near and far walls of that frame
+// into the same washed-out haze. FrontSide keeps only the surface actually
+// facing the camera.
+// thickness matched to the case shell's actual wall thickness (bevel ~.02),
+// not the whole phone -- a thin shell should only bend light a little.
+const caseMat=new THREE.MeshPhysicalMaterial({color:0xF8FAFF,
+  roughness:.026,metalness:0,
+  transmission:.92,thickness:.022,ior:1.55,
+  clearcoat:1,clearcoatRoughness:.026,
+  envMapIntensity:2.6,side:THREE.FrontSide,
+  transparent:false,depthWrite:true});
 const caseMesh=new THREE.Mesh(caseGeometry(),caseMat);
 caseMesh.castShadow=true;caseMesh.renderOrder=3;
 caseMesh.position.z=-PH.d/2-.018;phone.add(caseMesh);
@@ -678,10 +895,18 @@ buildHook();applyHookLook();
 
 function applyCase(){
   const c=CASES[S.caseI];
-  caseMat.color.setHex(c.hex);caseMat.opacity=c.opacity;caseMat.metalness=c.metal;
-  caseMat.roughness=Math.min(c.rough,.08);caseMat.clearcoat=1;
-  caseMat.clearcoatRoughness=.025;caseMat.envMapIntensity=Math.max(c.env,2.2);
-  caseMat.transparent=c.opacity<1;caseMat.depthWrite=c.opacity>=1;
+  caseMat.color.setHex(c.hex);caseMat.metalness=c.metal;
+  caseMat.transmission=c.trans;
+  // Sharper than the raw per-swatch numbers: even the "matte-ish" swatches (Milk,
+  // Bubble) should keep a hard clearcoat streak, they just differ in base
+  // roughness underneath it. clearcoatRoughness is deliberately not razor-zero:
+  // a perfect mirror only catches a highlight when a bright environment point
+  // lines up exactly with the surface normal, which on a rotatable object means
+  // most angles show nothing. A little softness keeps the highlight reliably
+  // visible while still reading as glossy, not matte.
+  caseMat.roughness=Math.min(c.rough,.05);caseMat.clearcoat=1;
+  caseMat.clearcoatRoughness=.045;caseMat.ior=1.55;
+  caseMat.envMapIntensity=Math.max(c.env,2.4);
   caseMat.needsUpdate=true;
 }
 
@@ -708,10 +933,18 @@ function stamenTex(){
 const STAMEN=stamenTex();
 const beadGeoSmall=new THREE.SphereGeometry(.017,8,6);
 let pendantParts=[];
+// Materials cloned from matAcrylic per-shape (bunny, ribbon) so applyLook()
+// can keep their tint in sync with the Color tab. Without this, picking a
+// shape captured whatever attenuationColor happened to be set at that
+// moment, and changing color afterward had no visible effect until the
+// pendant was rebuilt from scratch -- the color chip looked broken on these
+// two shapes specifically.
+let followColorMats=[];
 function clearPendant(){
   pendantParts.forEach(function(m){charmBody.remove(m);
     if(m.userData.own&&m.geometry)m.geometry.dispose();});
   pendantParts=[];
+  followColorMats=[];
 }
 function addPart(m,own){m.userData.own=!!own;m.castShadow=true;
   charmBody.add(m);pendantParts.push(m);return m;}
@@ -741,49 +974,113 @@ function buildPendant(){
       new THREE.MeshPhysicalMaterial({color:0xFFD65E,roughness:.2,clearcoat:1,envMapIntensity:1.5})),true)
       .position.set(0,0,.031);
   } else if(k==="keyboard"){
-    // A single key in a clear plastic bed, axis pointing at the viewer.
-    // Bed is an open shell (four walls + a floor) so you can see into the well.
-    const BED=.36, WALL=.086, BEDD=.20;
-    const shell=roundRectShape(BED,BED,.046);
-    shell.holes.push(new THREE.Path(roundRectPoints(BED-WALL,BED-WALL,.030,40,0,0)));
-    const walls=addPart(new THREE.Mesh(extrude(shell,BEDD,.014,24),matKeybed),true);
-    walls.position.set(0,0,-.060);walls.renderOrder=4;
-    const floor=addPart(new THREE.Mesh(
-      extrude(roundRectShape(BED,BED,.046),.034,.012,24),matKeybed),true);
-    floor.position.set(0,0,-.146);floor.renderOrder=4;
+    // A keycap displayed on a small clear acrylic riser -- like the real
+    // photo-cube keycap charms, a solid glossy block, NOT a hollow shell.
+    // A hollow shell (walls + floor around a cavity) puts the near outer
+    // wall, the near inner wall, the far inner wall, and the far outer wall
+    // all in the same sightline, so four stacked layers of the same
+    // translucent tint average into flat milky haze no matter how the
+    // material itself is tuned -- that was a geometry problem, not a
+    // lighting one. It also turned out the keycap's own footprint (.300)
+    // was WIDER than the cavity opening, so the "well" was fully hidden
+    // under the cap and only a thin flat lip was ever visible -- there was
+    // barely any glass surface left to shine in the first place. A solid
+    // riser block exposes tall vertical walls on all four sides instead.
+    // Anchored from the TOP down, close under the charm ring, the way every
+    // other shape here sits -- the first version anchored from the bottom of
+    // the bounding box instead, which left a long bare stretch of chain
+    // between the ring and the keycap that read as a rigging mistake.
+    const RISER_W=.300, RISER_D=.230, RISER_H=.220, CAP_H=.150;
+    const stackTopY=CH.h/2-.020;
+    const capY=stackTopY-CAP_H/2;
+    const riserY=capY-CAP_H/2-RISER_H/2+.012;   // small overlap, no visible seam
 
-    // the keycap itself: tapered skirt, sits on the bed rim and dips into the well
+    const riser=addPart(new THREE.Mesh(
+      extrude(roundRectShape(RISER_W,RISER_D,.038),RISER_H,.018,28),matKeybed),true);
+    riser.rotation.x=-Math.PI/2;               // stand the extrusion upright
+    riser.position.set(0,riserY,0);
+    riser.renderOrder=4;
+
+    // the keycap sits on top, same tapered-skirt geometry as before
     const cap=addPart(new THREE.Mesh(
-      keycapGeometry(.300,.300,.238,.238,.118,.042,.030,.009),matKeycap),true);
-    cap.position.set(0,0,.070);
+      keycapGeometry(.272,.222,.212,.176,CAP_H,.040,.028,.009),matKeycap),true);
+    cap.rotation.x=-Math.PI/2;
+    cap.position.set(0,capY,0);
 
-    // printed legend on the top face, driven by the Art tab
-    const a=addPart(new THREE.Mesh(new THREE.PlaneGeometry(.165,.165),matArt),true);
-    a.position.set(0,0,.1305);a.renderOrder=1;
+    // printed legend on the keycap's top face (now facing +Y after the rotation)
+    const a=addPart(new THREE.Mesh(new THREE.PlaneGeometry(.150,.150),matArt),true);
+    a.rotation.x=-Math.PI/2;
+    a.position.set(0,capY+CAP_H/2+.001,0);
+    a.renderOrder=1;
 
     // stem up to the charm ring
     const post=addPart(new THREE.Mesh(
       new THREE.CylinderGeometry(.017,.017,.130,10),matPendantMetal),true);
     post.position.set(0,.238,-.030);
   } else if(k==="bunny"){
-    const bunnyMat=matAcrylic.clone();bunnyMat.opacity=.72;
-    const earL=addPart(new THREE.Mesh(extrude(roundRectShape(.12,.29,.055),.055,.012,20),bunnyMat),true);
-    earL.position.set(-.105,.125,.006);earL.rotation.z=-.16;
-    const earR=addPart(new THREE.Mesh(extrude(roundRectShape(.12,.29,.055),.055,.012,20),bunnyMat),true);
-    earR.position.set(.105,.125,.006);earR.rotation.z=.16;
-    const head=addPart(new THREE.Mesh(new THREE.SphereGeometry(.19,20,14),bunnyMat));
-    head.scale.set(1,.86,.38);head.position.set(0,-.045,.006);
-    const nose=addPart(new THREE.Mesh(new THREE.SphereGeometry(.035,12,8),matBead));
-    nose.position.set(0,-.055,.085);
+    const bunnyMat=matAcrylic.clone();bunnyMat.transmission=.55;followColorMats.push(bunnyMat);
+    // Thin parts barely show any attenuation tint at the default .20
+    // distance tuned for thicker charms (the keyboard riser, the frame) --
+    // at this thickness (~.05) that read as colorless white regardless of
+    // the Color tab. A much shorter distance actually shows the tint.
+    bunnyMat.attenuationDistance=.055;
+    // Ears are elongated ellipsoids, not flat extruded planks -- a flat plank
+    // reads as a plastic tab glued on, an ellipsoid actually reads as an ear.
+    // Angled outward more and set slightly taller so they clearly poke up
+    // past the head silhouette from a 3/4 view instead of blending into it.
+    [-1,1].forEach(function(side){
+      const ear=addPart(new THREE.Mesh(new THREE.SphereGeometry(.058,16,12),bunnyMat),true);
+      ear.scale.set(1,2.5,.62);
+      ear.position.set(side*.100,.148,.002);
+      ear.rotation.z=side*-.26;
+    });
+    const head=addPart(new THREE.Mesh(new THREE.SphereGeometry(.185,22,16),bunnyMat),true);
+    head.scale.set(1,.88,.58);head.position.set(0,-.035,0);head.renderOrder=2;
+    // Eyes and blush as simple 3D geometry rather than a flat printed
+    // insert: a flat texture sitting just behind a transmissive surface
+    // gets refracted and re-sampled by that same surface's own transmission
+    // pass, which doubled it into a ghost image at every angle tried. Small
+    // solid shapes sitting proud of the surface sidestep that entirely and
+    // are what gives the head its actual expression -- the original bunny
+    // charm had no facial features at all.
+    const eyeGeo=new THREE.SphereGeometry(.016,10,8);
+    [-1,1].forEach(function(side){
+      const eye=addPart(new THREE.Mesh(eyeGeo,matInk),true);
+      eye.position.set(side*.052,-.010,.170);
+      const blush=addPart(new THREE.Mesh(new THREE.SphereGeometry(.024,10,8),matBead),true);
+      blush.scale.set(1,.7,.3);blush.position.set(side*.098,-.055,.150);
+    });
+    const nose=addPart(new THREE.Mesh(new THREE.SphereGeometry(.024,12,8),matBead),true);
+    nose.position.set(0,-.052,.178);
   } else if(k==="ribbon"){
-    const ribbonMat=matAcrylic.clone();ribbonMat.opacity=.78;
-    const left=addPart(new THREE.Mesh(extrude(heartShape(.19),.055,.012,22),ribbonMat),true);
-    left.position.set(-.115,0,0);left.rotation.z=-.55;
-    const right=addPart(new THREE.Mesh(extrude(heartShape(.19),.055,.012,22),ribbonMat),true);
-    right.position.set(.115,0,0);right.rotation.z=.55;
-    addPart(new THREE.Mesh(new THREE.SphereGeometry(.075,16,12),matPendantMetal),true).position.set(0,0,.035);
+    const ribbonMat=matAcrylic.clone();ribbonMat.transmission=.58;followColorMats.push(ribbonMat);
+    ribbonMat.attenuationDistance=.05;   // see bunny note above
+    const LOOP_W=.155,LOOP_H=.135,DEPTH=.050,GAP=.014;
+    // Two loop lobes, an actual bow silhouette rather than two rotated
+    // hearts (which was the entire visual problem before: it read as
+    // hearts, not a ribbon). Offset a small GAP apart at the centre --
+    // sharing one exact origin point let the bevel round the seam away
+    // entirely, so the two lobes rendered as a single merged blob with no
+    // visible waist between them.
+    [-1,1].forEach(function(side){
+      const loop=addPart(new THREE.Mesh(extrude(ribbonLoopShape(LOOP_W,LOOP_H),DEPTH,.011,22),ribbonMat),true);
+      loop.scale.x=side;loop.position.set(side*GAP,.028,0);loop.renderOrder=2;
+    });
+    // Hanging tails with the V-notch cut -- the single detail that reads as
+    // "ribbon" at a glance, and the thing the old charm had none of.
+    [-1,1].forEach(function(side){
+      const tail=addPart(new THREE.Mesh(extrude(ribbonTailShape(.052,.165),DEPTH*.82,.009,14),ribbonMat),true);
+      tail.position.set(side*.030,-.010,0);tail.rotation.z=side*-.10;tail.renderOrder=2;
+    });
+    // The knot is metal, not the same acrylic as the loops -- a same-colour
+    // knot disappeared into the loops it's supposed to be wrapping over.
+    // Real ribbon and bow charms almost always have a contrasting wrap or
+    // metal band right here for exactly this reason.
+    const knot=addPart(new THREE.Mesh(new THREE.SphereGeometry(.046,16,12),matPendantMetal),true);
+    knot.scale.set(1.15,.60,.62);knot.position.set(0,.028,.010);knot.renderOrder=3;
   } else if(k==="pudding"){
-    const puddingMat=matAcrylic.clone();puddingMat.opacity=.82;puddingMat.color.setHex(0xFFD978);
+    const puddingMat=matAcrylic.clone();puddingMat.transmission=.65;
+    puddingMat.color.setHex(0xFFD978);puddingMat.attenuationColor.setHex(0xFFD978);
     addPart(new THREE.Mesh(extrude(roundRectShape(.36,.34,.09),.12,.018,24),puddingMat),true).renderOrder=2;
     const topping=addPart(new THREE.Mesh(new THREE.SphereGeometry(.055,14,10),matBead));
     topping.position.set(0,.17,.055);topping.scale.set(1,.65,1);
@@ -1296,8 +1593,10 @@ function buildStrand(){
 
 function applyLook(){
   const M=MT(),col=COLORS[S.color].hex;
-  matAcrylic.color.setHex(col);
-  matAcrylic.opacity=M.opacity;matAcrylic.roughness=M.rough;
+  matAcrylic.attenuationColor.setHex(col);
+  matAcrylic.attenuationDistance=M.attnDist;
+  matAcrylic.transmission=M.transmission;
+  matAcrylic.roughness=M.rough;
   matAcrylic.clearcoat=M.cc;matAcrylic.clearcoatRoughness=M.ccr;
   matAcrylic.envMapIntensity=M.env;
   matAcrylic.roughnessMap=M.sparkle?SPARKLE:null;
@@ -1306,6 +1605,7 @@ function applyLook(){
   matPendantMetal.color.setHex(M.metalTone);matPendantMetal.needsUpdate=true;
   matMatte.color.setHex(col);matBead.color.setHex(col);matKeycap.color.setHex(col);
   matCord.color.setHex(new THREE.Color(col).lerp(new THREE.Color(0xFFFFFF),.42).getHex());
+  followColorMats.forEach(function(m){m.attenuationColor.setHex(col);m.needsUpdate=true;});
   rebuildInertia();
 }
 
@@ -1399,7 +1699,7 @@ const tiltQuat=new Q(),tiltCorrection=new Q(-Math.SQRT1_2,0,0,Math.SQRT1_2);
 const tiltScreenQuat=new Q(),tiltEuler=new THREE.Euler(),tiltZee=new V3(0,0,1);
 let tiltReady=false,tiltListening=false;
 let zoom=1,pinchStart=0,pinchZoom=1;
-const phoneTarget=new V3(0,.04,0);
+const phoneTarget=new V3(0,.34,0);
 phone.position.copy(phoneTarget);
 const pointers=new Map();
 let mode=null, lastX=0, lastY=0, panStart=new V3(), panOrigin=new V3();
@@ -1490,7 +1790,7 @@ function endPointer(e){
   canvas.addEventListener(t,endPointer);});
 
 document.getElementById("reset").addEventListener("click",function(){
-  yaw=0;pitch=0;yawV=0;pitchV=0;setZoom(1);phoneTarget.set(0,.04,0);
+  yaw=0;pitch=0;yawV=0;pitchV=0;setZoom(1);phoneTarget.set(0,.34,0);
   attachmentLocal.copy(HOOK_DEFAULT);updateAttachment();
 });
 
@@ -1540,6 +1840,7 @@ tiltBtn.addEventListener("click",function(){
    UI
    =================================================================== */
 const row2El=document.getElementById("row2");
+const row3El=document.getElementById("row3");
 const tabsEl=document.getElementById("tabs"),rowEl=document.getElementById("row");
 function chip(en,ko,on,active){
   const b=document.createElement("button");b.className="chip";
@@ -1552,23 +1853,6 @@ function swatch(hex,label,on,active){
   b.setAttribute("aria-label",label);b.setAttribute("aria-pressed",String(active));
   b.onclick=on;return b;
 }
-const bgSwatchesEl=document.getElementById("bgSwatches");
-BG_COLORS.forEach(function(c,i){
-  const b=document.createElement("button");b.className="bgSw";
-  b.style.background="#"+c.hex.toString(16).padStart(6,"0");
-  b.setAttribute("aria-pressed",String(i===S.bg));
-  b.onclick=function(){S.bg=i;applyBackground();
-    BG_COLORS.forEach(function(_,j){bgSwatchesEl.children[j].setAttribute("aria-pressed",String(j===S.bg));});};
-  bgSwatchesEl.appendChild(b);
-});
-function refreshBgLabels(){
-  BG_COLORS.forEach(function(c,i){
-    const label=nameOf(c)+T("bgSuffix");
-    bgSwatchesEl.children[i].title=label;
-    bgSwatchesEl.children[i].setAttribute("aria-label",label);
-  });
-}
-
 /* ===================================================================
    LANGUAGE SWITCH
    Korean (`.ko` spans, and the fixed "말랑참" tag in the header) is a
@@ -1591,7 +1875,6 @@ function retranslate(){
   tiltBtn.textContent=S.tilt?T("tiltOn"):T("tiltOff");
   const tiltAria=tiltBtn.getAttribute("aria-pressed");
   tiltBtn.setAttribute("aria-label",tiltAria==="true"?T("tiltOn"):T("tiltOff"));
-  refreshBgLabels();
   paint();   // re-render the active tab's chips in the new language
 }
 const langBtns=LANGS.map(function(l){
@@ -1605,7 +1888,6 @@ const langBtns=LANGS.map(function(l){
   };
   langSwitchEl.appendChild(b);return b;
 });
-refreshBgLabels();   // set initial aria-labels for the default language
 
 function artThumb(k){
   const cv=document.createElement("canvas");cv.width=cv.height=512;
@@ -1654,6 +1936,25 @@ const TABS=[
       const img=new Image();img.src=artThumb(k);b.appendChild(img);
       b.onclick=function(){S.art=i;redrawArt();paint();nudge();};
       rowEl.appendChild(b);});}},
+  {en:"Scene",zh:"场景",ja:"シーン",ko:"장면",build:function(){
+    // Background color, Reflections, and Backdrop style used to be three
+    // separate floating pill rows stacked in the top-right corner. Once a
+    // fourth preset group was added that corner became an unlabeled stack
+    // of near-identical circles. All three live here now, using the same
+    // chip/swatch treatment as every other option group in the tray.
+    BG_COLORS.forEach(function(c,i){rowEl.appendChild(swatch(c.hex,nameOf(c)+T("bgSuffix"),function(){
+      S.bg=i;applyBackground();paint();},i===S.bg));});
+    const lab2=document.createElement("span");lab2.className="sldlab";
+    lab2.innerHTML=T("reflectionsLabel")+' <span class="ko">반사</span>';
+    row2El.appendChild(lab2);
+    REFLECTIONS.forEach(function(r,i){row2El.appendChild(chip(nameOf(r),r.ko,function(){
+      S.env=i;applyEnvironment();paint();},i===S.env));});
+    const lab3=document.createElement("span");lab3.className="sldlab";
+    lab3.innerHTML=T("backdropLabel")+' <span class="ko">배경</span>';
+    row3El.appendChild(lab3);
+    BACKDROPS.forEach(function(d,i){row3El.appendChild(chip(nameOf(d),d.ko,function(){
+      S.backdrop=i;applyBackdropStyle();paint();},i===S.backdrop));});
+  }},
 ];
 let tabI=1;
 const tabBtns=TABS.map(function(t,i){
@@ -1667,7 +1968,7 @@ function paint(){
     b.setAttribute("aria-selected",String(i===tabI));
     b.querySelector(".en").textContent=nameOf(TABS[i]);
   });
-  rowEl.innerHTML="";row2El.innerHTML="";TABS[tabI].build();
+  rowEl.innerHTML="";row2El.innerHTML="";row3El.innerHTML="";TABS[tabI].build();
 }
 // impulse scaled by mass, so a heavy frame moves less than a light sakura
 function nudge(){
@@ -1701,14 +2002,17 @@ document.getElementById("shutter").addEventListener("click",function(){
 /* ===================================================================
    BOOT + LOOP
    =================================================================== */
+// Camera sits slightly high and aims below centre, so the phone crops off
+// the top of frame and the charm sits in the middle third.
+const VIEW_Y=.30, VIEW_LOOK_Y=-.16;
 function resize(){
   const w=innerWidth,h=innerHeight;
   renderer.setSize(w,h,false);camera.aspect=w/h;
-  camera.position.set(0,.05,0);setZoom(zoom);
-  camera.updateProjectionMatrix();camera.lookAt(0,0,0);
+  camera.position.set(0,VIEW_Y,0);setZoom(zoom);
+  camera.updateProjectionMatrix();camera.lookAt(0,VIEW_LOOK_Y,0);
 }
 addEventListener("resize",resize);resize();
-applyCase();applyBackground();buildPendant();buildStrand();redrawArt();applyLook();paint();
+applyCase();applyBackdropStyle();applyBackground();buildPendant();buildStrand();redrawArt();applyLook();paint();
 
 // Start the strand below and slightly away from the rear hook.
 const startAnchor=new V3().copy(ANCHOR_LOCAL).applyQuaternion(phone.quaternion).add(phone.position);
@@ -1786,6 +2090,7 @@ function frame(now){
     for(let i=1;i<P.length;i++)P[i].v.multiplyScalar(idleDamp);
   }
   syncMeshes(dt);
+  updateContactShadow();
 
   for(let i=0;i<sparks.length;i++){
     const s=sparks[i],u=s.userData;
