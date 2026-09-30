@@ -149,7 +149,22 @@
   #flash{position:fixed;inset:0;z-index:9;background:#fff;opacity:0;pointer-events:none;}
   #flash.pop{animation:pop .45s ease-out;}
   @keyframes pop{0%{opacity:.9}100%{opacity:0}}
-  @media (prefers-reduced-motion:reduce){#grain{animation:none}.chip,.sw,.art,.fab{transition:none}}
+  /* Realistic mode does its own optical vignette and film grain in the post
+     shader (in linear light, before tone mapping), so the CSS overlays that
+     fake those two effects for Studio mode would double them up. */
+  body.pbr #grade,body.pbr #grain{display:none;}
+  #toast{position:fixed;left:50%;top:calc(env(safe-area-inset-top) + 76px);z-index:7;
+    transform:translate(-50%,-6px);max-width:calc(100% - 32px);padding:8px 14px;border-radius:999px;
+    background:rgba(14,13,19,.82);color:#F4F4F8;font-size:11px;font-weight:700;text-align:center;
+    pointer-events:none;opacity:0;transition:opacity .35s ease,transform .35s ease;}
+  #toast.show{opacity:1;transform:translate(-50%,0);}
+  /* Focus reticle: shown briefly wherever depth of field has just locked on. */
+  #focusRing{position:fixed;left:0;top:0;z-index:4;width:46px;height:46px;margin:-23px 0 0 -23px;
+    border:2px solid rgba(255,255,255,.95);border-radius:12px;pointer-events:none;opacity:0;
+    box-shadow:0 0 0 1px rgba(0,0,0,.35),inset 0 0 0 1px rgba(0,0,0,.25);
+    transform:scale(1.35);transition:opacity .25s ease,transform .25s cubic-bezier(.3,1.6,.5,1);}
+  #focusRing.show{opacity:1;transform:scale(1);}
+  @media (prefers-reduced-motion:reduce){#grain{animation:none}.chip,.sw,.art,.fab,#toast,#focusRing{transition:none}}
 </style>
 </head>
 <body>
@@ -172,6 +187,8 @@
 
 <div id="tray"><div id="tabs" role="tablist"></div><div id="row"></div><div id="row2"></div><div id="row3"></div></div>
 <div id="flash"></div>
+<div id="toast" role="status" aria-live="polite"></div>
+<div id="focusRing"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
 <script>
@@ -275,21 +292,33 @@ const I18N={
       tiltOn:"Tilt on",tiltOff:"Tilt off",reset:"Reset",snap:"SNAP",length:"Length",
       takePhoto:"Take a photo",chainLength:"Chain length",
       bgColor:"Background color",bgSuffix:" background",reflectionSuffix:" reflections",backdropSuffix:" backdrop",
-      reflectionsLabel:"Reflections",backdropLabel:"Backdrop"},
+      reflectionsLabel:"Reflections",backdropLabel:"Backdrop",
+      freeZoom:"Free zoom",dof:"Depth of field",bloom:"Bloom",aperture:"Aperture",wetness:"Wetness",
+      freeZoomHint:"Scroll or pinch toward anything to get close · double-tap to focus",
+      focusHint:"Double-tap anything to focus on it",
+      compiling:"Preparing realistic shaders…"},
   zh:{tagline:"设计与摇摆",
       hint1:"拖动手机旋转",hint1b:"轻甩后松开",
       hint2:"双指或按住 Shift 拖动可移动位置",
       tiltOn:"倾斜开启",tiltOff:"倾斜关闭",reset:"重置",snap:"拍照",length:"长度",
       takePhoto:"拍照",chainLength:"链长",
       bgColor:"背景颜色",bgSuffix:" 背景",reflectionSuffix:" 反射",backdropSuffix:" 背景样式",
-      reflectionsLabel:"反射",backdropLabel:"背景样式"},
+      reflectionsLabel:"反射",backdropLabel:"背景样式",
+      freeZoom:"自由缩放",dof:"景深",bloom:"泛光",aperture:"光圈",wetness:"湿润度",
+      freeZoomHint:"对准任意位置滚动或双指缩放即可近拍 · 双击对焦",
+      focusHint:"双击任意位置即可对焦",
+      compiling:"正在准备写实着色器…"},
   ja:{tagline:"デザイン＆スイング",
       hint1:"ドラッグしてスマホを回す",hint1b:"はじいて手を離す",
       hint2:"二本指、またはShift+ドラッグで移動",
       tiltOn:"傾き ON",tiltOff:"傾き OFF",reset:"リセット",snap:"撮影",length:"長さ",
       takePhoto:"写真を撮る",chainLength:"チェーンの長さ",
       bgColor:"背景色",bgSuffix:" 背景",reflectionSuffix:" 反射",backdropSuffix:" 背景スタイル",
-      reflectionsLabel:"反射",backdropLabel:"背景スタイル"},
+      reflectionsLabel:"反射",backdropLabel:"背景スタイル",
+      freeZoom:"フリーズーム",dof:"被写界深度",bloom:"ブルーム",aperture:"絞り",wetness:"濡れ",
+      freeZoomHint:"寄りたい場所に向けてスクロール／ピンチ · ダブルタップでピント合わせ",
+      focusHint:"ダブルタップでピントを合わせる",
+      compiling:"リアル描画を準備中…"},
 };
 function T(k){return I18N[S.lang][k];}
 const ELEM={
@@ -351,7 +380,8 @@ const ART={
       g.strokeStyle="rgba(36,30,40,.35)";g.lineWidth=4;g.stroke();});},
 };
 const ART_KEYS=Object.keys(ART);
-const S={lang:"en",linkLen:.040,caseI:0,shapeI:1,mat:0,color:1,strand:0,art:4,hook:1,hookColor:1,bg:2,env:0,backdrop:0,tilt:false};
+const S={lang:"en",linkLen:.040,caseI:0,shapeI:1,mat:0,color:1,strand:0,art:4,hook:1,hookColor:1,bg:2,env:0,backdrop:0,tilt:false,
+  render:0,freeZoom:false,dof:true,bloom:true,fstop:2.8,wet:0};
 function SH(){return SHAPES[S.shapeI];}
 function MT(){return MATERIALS[S.mat];}
 function ST(){return STRANDS[S.strand];}
@@ -369,6 +399,431 @@ renderer.toneMappingExposure=1.02;
 renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
 const scene=new THREE.Scene();
 const camera=new THREE.PerspectiveCamera(30,1,0.1,100);
+
+/* ===================================================================
+   REALISTIC SHADING
+   Everything the Realistic render mode changes about how a surface is lit
+   lives behind one preprocessor switch, CHARM_REALISTIC. Studio mode never
+   defines it, so Studio programs compile to exactly what they always did;
+   the mode switch just flips which variant each material asks for (see
+   fxHook / FX.epoch below).
+   -------------------------------------------------------------------
+   What the realistic path adds on top of three's GGX/Smith/Schlick core:
+   - Burley diffuse (Frostbite renormalised) for the key light, with the
+     light the specular lobe already reflected taken out of the diffuse
+     layer, so a surface can't reflect more than it receives.
+   - The key's specular comes from its softbox in the environment rather
+     than from the punctual light. A punctual GGX highlight is a round dot;
+     a real softbox reflects as a crisp rectangle, which is most of what
+     makes glossy product shots read as photographs. Its diffuse comes only
+     from the (shadowed) punctual light: IBL diffuse reads a second copy of
+     the environment baked without the softbox.
+   - Horizon specular occlusion: a perturbed normal (water drops) can point
+     a reflection below the real surface, where the object itself blocks
+     the environment.
+   - Thin-film interference for nacre (pearls) and iridescent beads.
+   - A water layer (F0 0.02, n = 1.33) driven by a wetness map, plus
+     porous-albedo darkening (Lagarde, "Water drop 2").
+   - Micro-surface roughness maps: grain, fingerprints, hairline scratches.
+   - PCSS contact-hardening shadows sized to the key softbox.
+   - physically plausible metalness/env values (see FX profiles below).
+   =================================================================== */
+const FX={on:false,epoch:0,assetsReady:false};
+// Key light geometry for Realistic mode. The softbox subtends ~0.2 rad, and
+// the shadow penumbra and the env panel are both sized from these numbers so
+// shadow softness and highlight shape agree about how big the light is.
+const PBR_KEY={pos:new THREE.Vector3(2.6,3.6,3.4),near:2,far:11,half:3,angle:.2,
+  w:2.0,h:1.5,dist:4.5,radiance:60};   // softbox size, distance and radiance
+(function patchChunks(){
+  const C=THREE.ShaderChunk;
+  function swap(chunk,from,to){
+    // Fail loudly in the console but never break rendering: if a future
+    // three.js changes a chunk, the realistic path just loses that feature.
+    if(C[chunk].indexOf(from)<0){console.warn("[charm] shader patch skipped:",chunk);return;}
+    C[chunk]=C[chunk].split(from).join(to);
+  }
+  C.envmap_physical_pars_fragment=
+    "#ifdef CHARM_REALISTIC\n\tuniform float fxEnvI;\n\tuniform sampler2D fxIrrMap;\n"+
+    "\t#define CHARM_ENV_I fxEnvI\n\t#define CHARM_IRR_MAP fxIrrMap\n"+
+    "#else\n\t#define CHARM_ENV_I envMapIntensity\n\t#define CHARM_IRR_MAP envMap\n#endif\n"+
+    C.envmap_physical_pars_fragment;
+  // --- env intensity: Studio boosts it per material (2-3x) to fake a brighter
+  // studio; Realistic lights the environment at its real brightness instead.
+  swap("envmap_physical_pars_fragment","envMapColor.rgb * envMapIntensity;","envMapColor.rgb * CHARM_ENV_I;");
+  // --- the key softbox is in the environment (that's where its crisp
+  // reflection comes from) AND is the shadowed directional light. Diffuse
+  // irradiance is read from a second copy of the environment baked without
+  // that softbox, so the key's diffuse arrives exactly once, with shadows.
+  // Otherwise the environment's unshadowed copy fills every shadow back in.
+  swap("envmap_physical_pars_fragment","vec4 envMapColor = textureCubeUV( envMap, worldNormal, 1.0 );",
+    "vec4 envMapColor = textureCubeUV( CHARM_IRR_MAP, worldNormal, 1.0 );");
+
+  // --- direct lighting
+  const ORIG_DIRECT=
+    "\treflectedLight.directSpecular += irradiance * BRDF_GGX( directLight.direction, geometry.viewDir, geometry.normal, material.specularColor, material.specularF90, material.roughness );\n"+
+    "\treflectedLight.directDiffuse += irradiance * BRDF_Lambert( material.diffuseColor );\n";
+  swap("lights_physical_pars_fragment",ORIG_DIRECT,
+    "#ifdef CHARM_REALISTIC\n"+
+    "\treflectedLight.directDiffuse += irradiance * charmDiffuse( directLight.direction, geometry, material );\n"+
+    "#else\n"+ORIG_DIRECT+"#endif\n");
+  const ORIG_CC="\t\tclearcoatSpecular += ccIrradiance * BRDF_GGX( directLight.direction, geometry.viewDir, geometry.clearcoatNormal, material.clearcoatF0, material.clearcoatF90, material.clearcoatRoughness );\n";
+  swap("lights_physical_pars_fragment",ORIG_CC,"#ifndef CHARM_REALISTIC\n"+ORIG_CC+"#endif\n");
+  swap("lights_physical_pars_fragment","void RE_Direct_Physical(",[
+    "#ifdef CHARM_REALISTIC",
+    "vec3 charmDiffuse( const in vec3 L, const in GeometricContext geometry, const in PhysicalMaterial material ) {",
+    "\tvec3 N = geometry.normal, V = geometry.viewDir, H = normalize( L + V );",
+    "\tfloat NoL = saturate( dot( N, L ) ), NoV = saturate( dot( N, V ) ) + 1e-5, LoH = saturate( dot( L, H ) );",
+    "\tfloat r = material.roughness;",
+    "\tfloat fd90 = 0.5 * r + 2.0 * LoH * LoH * r;",
+    // (not l5/v5: cube_uv_reflection_fragment #defines v0..v6)
+    "\tfloat chL = 1.0 - NoL, chV = 1.0 - NoV;",
+    "\tchL = chL * chL * chL * chL * chL; chV = chV * chV * chV * chV * chV;",
+    "\tfloat burley = ( 1.0 + ( fd90 - 1.0 ) * chL ) * ( 1.0 + ( fd90 - 1.0 ) * chV ) * mix( 1.0, 1.0 / 1.51, r );",
+    "\tvec2 fab = DFGApprox( N, V, r );",
+    "\tvec3 Es = material.specularColor * fab.x + material.specularF90 * fab.y;",
+    "\treturn material.diffuseColor * RECIPROCAL_PI * burley * ( 1.0 - Es );",
+    "}",
+    "#endif",
+    "void RE_Direct_Physical("].join("\n"));
+
+  // --- horizon specular occlusion on the IBL lookup
+  const ORIG_IBL="\tradiance += getIBLRadiance( geometry.viewDir, geometry.normal, material.roughness );\n";
+  swap("lights_fragment_maps",ORIG_IBL,
+    "#ifdef CHARM_REALISTIC\n"+
+    "\t{\n\t\tvec3 chR = reflect( - geometry.viewDir, geometry.normal );\n"+
+    "\t\tfloat chHo = saturate( 1.0 + 1.3 * dot( chR, geometryNormal ) );\n"+
+    "\t\tradiance += getIBLRadiance( geometry.viewDir, geometry.normal, material.roughness ) * chHo * chHo;\n\t}\n"+
+    "#else\n"+ORIG_IBL+"#endif\n");
+
+  // --- PCSS. Orthographic (directional) shadow: penumbra width grows linearly
+  // with the receiver-to-blocker distance along the light, scaled by the
+  // light's angular size. K converts normalised shadow depth to shadow-map UV.
+  const K=((PBR_KEY.far-PBR_KEY.near)*Math.tan(PBR_KEY.angle)/(PBR_KEY.half*2)).toFixed(5);
+  swap("shadowmap_pars_fragment","\tvec2 texture2DDistribution(",[
+    "#ifdef CHARM_REALISTIC",
+    "\t#define CHARM_PCSS_K "+K,
+    "\tvec2 charmVogel( const in int i, const in float n, const in float phi ) {",
+    "\t\tfloat r = sqrt( ( float( i ) + 0.5 ) / n ), t = float( i ) * 2.39996323 + phi;",
+    "\t\treturn r * vec2( cos( t ), sin( t ) );",
+    "\t}",
+    "\tfloat charmPCSS( sampler2D sm, vec2 texel, vec2 uv, float zR ) {",
+    // per-pixel rotation (interleaved gradient noise) trades banding for fine grain
+    "\t\tfloat phi = 6.2831853 * fract( 52.9829189 * fract( dot( gl_FragCoord.xy, vec2( 0.06711056, 0.00583715 ) ) ) );",
+    "\t\tfloat searchR = min( CHARM_PCSS_K * zR, 0.08 );",
+    "\t\tfloat zSum = 0.0, nB = 0.0;",
+    "\t\tfor ( int i = 0; i < 16; i ++ ) {",
+    "\t\t\tfloat d = unpackRGBAToDepth( texture2D( sm, uv + charmVogel( i, 16.0, phi ) * searchR ) );",
+    "\t\t\tif ( d < zR ) { zSum += d; nB += 1.0; }",
+    "\t\t}",
+    "\t\tif ( nB < 0.5 ) return 1.0;",
+    "\t\tfloat pen = max( CHARM_PCSS_K * ( zR - zSum / nB ), 1.5 * texel.x );",
+    "\t\tfloat lit = 0.0;",
+    "\t\tfor ( int i = 0; i < 32; i ++ ) lit += texture2DCompare( sm, uv + charmVogel( i, 32.0, phi ) * pen, zR );",
+    "\t\treturn lit / 32.0;",
+    "\t}",
+    "#endif",
+    "\tvec2 texture2DDistribution("].join("\n"));
+  swap("shadowmap_pars_fragment","\t\tif ( frustumTest ) {\n",
+    "\t\tif ( frustumTest ) {\n#ifdef CHARM_REALISTIC\n\t\t\treturn charmPCSS( shadowMap, vec2( 1.0 ) / shadowMapSize, shadowCoord.xy, shadowCoord.z );\n#endif\n");
+})();
+
+/* ---- per-material realistic profile ----------------------------------
+   Stored on material.userData.fx so clones (matAcrylic -> bunny/ribbon,
+   matSilver -> hook/pendant metal) inherit it automatically.
+   por:     porosity, how much the albedo darkens when soaked (fabric, paper)
+   metal:   metalness in Realistic mode (-1 keeps the Studio value). Studio
+            uses partial metalness (.28, .42, .82) as a look; a real surface
+            is either a metal or a dielectric.
+   rough:   roughness override (-1 keeps the Studio value)
+   env:     environment intensity. 1 is physically correct.
+   fine/smudge/scratch: strength of each roughness-map channel
+   water:   how much water the surface holds (0 = stays dry, e.g. backdrop)
+   film/nm: thin-film interference strength and film thickness in nm */
+const FX_DEFAULT={por:0,metal:-1,rough:-1,env:1,fine:.12,smudge:0,scratch:0,water:1,film:0,nm:0};
+function fxProfile(m,p){m.userData.fx=Object.assign({},p);return m;}
+const FXU={fxWet:{value:0},fxWetMap:{value:null},fxRoughMap:{value:null},fxIrrMap:{value:null},
+  // tile size in world units: roughness map 6 cm (big enough that fingerprints
+  // don't visibly repeat across a phone), droplet map 3.5 cm
+  fxTile:{value:new THREE.Vector2(1/.6,1/.35)}};
+const FX_VERT_PARS=[
+  "#ifdef CHARM_REALISTIC",
+  "\tvarying vec3 vFxPos;\n\tvarying vec3 vFxNrm;\n\tvarying mat3 vFxN2V;\n\tuniform vec3 fxSeed;",
+  "#endif",
+  "void main() {"].join("\n");
+const FX_VERT_MAIN=[
+  "#include <project_vertex>",
+  "#ifdef CHARM_REALISTIC",
+  // object space scaled back to world units: the maps stay glued to a
+  // swinging charm (no swimming) but keep a real-world texel size even on
+  // meshes built from unit geometry and scaled down (pearls, beads)
+  "\tvFxPos = transformed * vec3( length( modelMatrix[ 0 ].xyz ), length( modelMatrix[ 1 ].xyz ), length( modelMatrix[ 2 ].xyz ) ) + fxSeed;",
+  "\tvFxNrm = objectNormal;",
+  "\tvFxN2V = normalMatrix;",
+  "#endif"].join("\n");
+const FX_FRAG_PARS=[
+  "#ifdef CHARM_REALISTIC",
+  "\tvarying vec3 vFxPos;\n\tvarying vec3 vFxNrm;\n\tvarying mat3 vFxN2V;",
+  "\tuniform sampler2D fxWetMap;\n\tuniform sampler2D fxRoughMap;\n\tuniform float fxWet;\n\tuniform vec2 fxTile;",
+  "\tuniform vec4 fxSurf;   // porosity, metal override, roughness override, water capacity",
+  "\tuniform vec4 fxDetail; // fine grain, smudge, scratch, (unused)",
+  "\tuniform vec2 fxFilmP;  // thin-film strength, thickness nm",
+  "#endif",
+  "void main() {"].join("\n");
+// Triplanar in object space, with Golus' axis-sign fix so the mirrored side
+// of each projection doesn't shade droplets inside out, and whiteout blending
+// for the droplet normals.
+const FX_FRAG_SURFACE=[
+  "#include <metalnessmap_fragment>",
+  "#ifdef CHARM_REALISTIC",
+  "\tvec3 fxN0 = normalize( vFxNrm );",
+  "\tvec3 fxBl = pow( abs( fxN0 ), vec3( 4.0 ) ); fxBl /= fxBl.x + fxBl.y + fxBl.z;",
+  "\tvec3 fxSg = vec3( fxN0.x < 0.0 ? - 1.0 : 1.0, fxN0.y < 0.0 ? - 1.0 : 1.0, fxN0.z < 0.0 ? - 1.0 : 1.0 );",
+  "\tvec3 fxPr = vFxPos * fxTile.x;",
+  "\tvec4 fxR = texture2D( fxRoughMap, vec2( fxPr.z * fxSg.x, fxPr.y ) ) * fxBl.x",
+  "\t        + texture2D( fxRoughMap, vec2( fxPr.x * fxSg.y, fxPr.z ) ) * fxBl.y",
+  "\t        + texture2D( fxRoughMap, vec2( - fxPr.x * fxSg.z, fxPr.y ) ) * fxBl.z;",
+  "\tvec3 fxPw = vFxPos * fxTile.y;",
+  "\tvec4 fxWx = texture2D( fxWetMap, vec2( fxPw.z * fxSg.x, fxPw.y ) );",
+  "\tvec4 fxWy = texture2D( fxWetMap, vec2( fxPw.x * fxSg.y, fxPw.z ) );",
+  "\tvec4 fxWz = texture2D( fxWetMap, vec2( - fxPw.x * fxSg.z, fxPw.y ) );",
+  "\tfloat fxWetL = fxWet * fxSurf.w;",
+  // B holds each droplet's appearance threshold: more wetness, more drops
+  "\tvec3 fxVis = saturate( ( vec3( fxWetL ) - vec3( fxWx.b, fxWy.b, fxWz.b ) ) * 16.0 );",
+  "\tfloat fxDrop = dot( fxVis, fxBl );",
+  // A is a low-frequency pattern so a thin film forms (and dries) unevenly
+  "\tfloat fxPattern = fxWx.a * fxBl.x + fxWy.a * fxBl.y + fxWz.a * fxBl.z;",
+  "\tfloat fxFilm = saturate( fxWetL * 2.2 - 1.2 + fxPattern * 0.9 );",
+  "\tvec2 fxDx = ( fxWx.rg * 2.0 - 1.0 ) * fxVis.x; fxDx.x *= fxSg.x;",
+  "\tvec2 fxDy = ( fxWy.rg * 2.0 - 1.0 ) * fxVis.y; fxDy.x *= fxSg.y;",
+  "\tvec2 fxDz = ( fxWz.rg * 2.0 - 1.0 ) * fxVis.z; fxDz.x *= - fxSg.z;",
+  "\tvec3 fxTx = vec3( fxDx + fxN0.zy, sqrt( saturate( 1.0 - dot( fxDx, fxDx ) ) ) * fxN0.x );",
+  "\tvec3 fxTy = vec3( fxDy + fxN0.xz, sqrt( saturate( 1.0 - dot( fxDy, fxDy ) ) ) * fxN0.y );",
+  "\tvec3 fxTz = vec3( fxDz + fxN0.xy, sqrt( saturate( 1.0 - dot( fxDz, fxDz ) ) ) * fxN0.z );",
+  "\tvec3 fxNd = normalize( fxTx.zyx * fxBl.x + fxTy.xzy * fxBl.y + fxTz.xyz * fxBl.z );",
+  "\tif ( fxSurf.y >= 0.0 ) metalnessFactor = fxSurf.y;",
+  "\tif ( fxSurf.z >= 0.0 ) roughnessFactor = fxSurf.z;",
+  // grain scales roughness multiplicatively (a gloss surface stays glossy);
+  // fingerprints and scratches add a haze on top
+  "\troughnessFactor *= exp2( ( fxR.r - 0.5 ) * 2.0 * fxDetail.x );",
+  "\troughnessFactor += fxR.g * fxDetail.y + fxR.b * fxDetail.z;",
+  // water fills the micro-surface in
+  "\troughnessFactor = mix( roughnessFactor, min( roughnessFactor, 0.08 ), fxFilm );",
+  "\t#ifndef USE_CLEARCOAT",
+  "\t\troughnessFactor = mix( roughnessFactor, 0.03, fxDrop );",
+  "\t#endif",
+  "\troughnessFactor = saturate( roughnessFactor );",
+  "\tdiffuseColor.rgb *= mix( 1.0, 0.38, fxSurf.x * max( fxFilm, fxDrop ) );",
+  "#endif"].join("\n");
+const FX_FRAG_NORMAL=[
+  "#include <clearcoat_normal_fragment_maps>",
+  "#ifdef CHARM_REALISTIC",
+  "\t{",
+  "\t\tvec3 fxDelta = ( normalize( vFxN2V * fxNd ) - normalize( vFxN2V * fxN0 ) ) * faceDirection;",
+  // drops sit on top of a coat when there is one, otherwise on the surface
+  "\t\t#ifdef USE_CLEARCOAT",
+  "\t\t\tclearcoatNormal = normalize( clearcoatNormal + fxDelta );",
+  "\t\t#else",
+  "\t\t\tnormal = normalize( normal + fxDelta );",
+  "\t\t#endif",
+  "\t}",
+  "#endif"].join("\n");
+const FX_FRAG_LAYERS=[
+  "#include <lights_physical_fragment>",
+  "#ifdef CHARM_REALISTIC",
+  "\t#ifdef USE_CLEARCOAT",
+  "\t\tfloat fxWater = max( fxFilm, fxDrop );",
+  "\t\tmaterial.clearcoat = max( material.clearcoat, fxWater );",
+  "\t\tmaterial.clearcoatRoughness = mix( material.clearcoatRoughness, 0.0525 + geometryRoughness, fxWater );",
+  "\t\tmaterial.clearcoatF0 = mix( material.clearcoatF0, vec3( 0.02 ), fxWater );",
+  "\t#endif",
+  // two-beam thin-film interference, film index 1.45
+  "\tvec3 fxIri = vec3( 1.0 );",
+  "\tif ( fxFilmP.x > 0.0 ) {",
+  "\t\tfloat fxCos = saturate( dot( normal, normalize( vViewPosition ) ) );",
+  "\t\tfloat fxCosT = sqrt( 1.0 - ( 1.0 - fxCos * fxCos ) / 2.1025 );",
+  "\t\tvec3 fxPh = 6.2831853 * ( 2.0 * 1.45 * fxFilmP.y * fxCosT ) / vec3( 650.0, 532.0, 450.0 );",
+  "\t\tfxIri = 1.0 + fxFilmP.x * cos( fxPh );",
+  "\t}",
+  "#endif"].join("\n");
+const FX_FRAG_TINT=[
+  "#include <lights_fragment_end>",
+  "#ifdef CHARM_REALISTIC",
+  "\treflectedLight.directSpecular *= fxIri;",
+  "\treflectedLight.indirectSpecular *= fxIri;",
+  "#endif"].join("\n");
+const FX_HOOKED=new WeakSet(), FX_EPOCH=new WeakMap();
+function fxHook(m){
+  if(FX_HOOKED.has(m))return;
+  FX_HOOKED.add(m);
+  const p=Object.assign({},FX_DEFAULT,m.userData.fx||{});
+  const own={
+    fxSurf:{value:new THREE.Vector4(p.por,p.metal,p.rough,p.water)},
+    fxDetail:{value:new THREE.Vector4(p.fine,p.smudge,p.scratch,0)},
+    fxFilmP:{value:new THREE.Vector2(p.film,p.nm)},
+    fxEnvI:{value:p.env},
+    // per-material offset so every mesh doesn't wear the identical droplet
+    // pattern at the identical spot
+    fxSeed:{value:new THREE.Vector3(Math.random()*9,Math.random()*9,Math.random()*9)}};
+  m.onBeforeCompile=function(sh){
+    Object.assign(sh.uniforms,FXU,own);
+    const pre=FX.on?"#define CHARM_REALISTIC\n":"";
+    sh.vertexShader=pre+sh.vertexShader
+      .replace("void main() {",FX_VERT_PARS)
+      .replace("#include <project_vertex>",FX_VERT_MAIN);
+    sh.fragmentShader=pre+sh.fragmentShader
+      .replace("void main() {",FX_FRAG_PARS)
+      .replace("#include <metalnessmap_fragment>",FX_FRAG_SURFACE)
+      .replace("#include <clearcoat_normal_fragment_maps>",FX_FRAG_NORMAL)
+      .replace("#include <lights_physical_fragment>",FX_FRAG_LAYERS)
+      .replace("#include <lights_fragment_end>",FX_FRAG_TINT)
+      // composite the coat with the per-pixel value, so a water film can
+      // add a coat where the material had none
+      .replace("outgoingLight * ( 1.0 - clearcoat * Fcc ) + clearcoatSpecular * clearcoat",
+               "outgoingLight * ( 1.0 - material.clearcoat * Fcc ) + clearcoatSpecular * material.clearcoat");
+  };
+  m.customProgramCacheKey=function(){return FX.on?"charm-realistic":"charm-studio";};
+}
+// Called on every mesh each frame (cheap): hooks materials that appeared
+// since the last mode switch (pendant/strand rebuilds create new clones) and
+// forces a recompile on anything still carrying the other mode's program.
+function fxSync(o){
+  const m=o.material;
+  if(!m||m.isMeshBasicMaterial||m.isShaderMaterial)return;
+  if(FX.on) fxHook(m);
+  if(FX_EPOCH.get(m)!==FX.epoch){FX_EPOCH.set(m,FX.epoch);m.needsUpdate=true;}
+  // Studio only ever let the backdrop receive shadows. With PCSS the charm's
+  // shadow falling across the phone is one of the strongest realism cues.
+  o.receiveShadow=FX.on||o===backdrop;
+}
+
+/* ---- procedural maps (built once, on first switch to Realistic) ---- */
+// Tileable value-noise fbm, 0..1.
+function fbmTile(N,period,octaves,gain){
+  const out=new Float32Array(N*N);let amp=1,norm=0;
+  for(let o=0;o<octaves;o++,period*=2,amp*=gain){
+    const g=new Float32Array(period*period);for(let i=0;i<g.length;i++)g[i]=Math.random();
+    const s=period/N;norm+=amp;
+    for(let y=0;y<N;y++){
+      const fy=y*s,y0=Math.floor(fy),ty=fy-y0,sy=ty*ty*(3-2*ty),r0=(y0%period)*period,r1=((y0+1)%period)*period;
+      for(let x=0;x<N;x++){
+        const fx=x*s,x0=Math.floor(fx),tx=fx-x0,sx=tx*tx*(3-2*tx),c0=x0%period,c1=(x0+1)%period;
+        const a=g[r0+c0]+(g[r0+c1]-g[r0+c0])*sx, b=g[r1+c0]+(g[r1+c1]-g[r1+c0])*sx;
+        out[y*N+x]+=amp*(a+(b-a)*sy);
+      }
+    }
+  }
+  let lo=1e9,hi=-1e9;
+  for(let i=0;i<out.length;i++){out[i]/=norm;lo=Math.min(lo,out[i]);hi=Math.max(hi,out[i]);}
+  for(let i=0;i<out.length;i++)out[i]=(out[i]-lo)/Math.max(hi-lo,1e-6);
+  return out;
+}
+// draw() is called at the 9 wrapped offsets so strokes crossing an edge tile
+function wrapDraw(g,N,draw){for(let oy=-1;oy<=1;oy++)for(let ox=-1;ox<=1;ox++){g.save();g.translate(ox*N,oy*N);draw(g);g.restore();}}
+function dataTex(bytes,N){
+  const t=new THREE.DataTexture(bytes,N,N,THREE.RGBAFormat);
+  t.wrapS=t.wrapT=THREE.RepeatWrapping;t.generateMipmaps=true;
+  t.minFilter=THREE.LinearMipmapLinearFilter;t.magFilter=THREE.LinearFilter;
+  t.anisotropy=renderer.capabilities.getMaxAnisotropy();t.needsUpdate=true;return t;
+}
+// R: fine grain  G: fingerprints + smears  B: hairline scratches
+function makeRoughMap(){
+  const N=1024,grain=fbmTile(N,128,3,.6),smear=fbmTile(N,3,3,.5);
+  const cv=document.createElement("canvas");cv.width=cv.height=N;const g=cv.getContext("2d");
+  // fingerprints: ~0.45 mm ridge pitch on a 60 mm tile is ~7.7 px
+  g.fillStyle="#000";g.fillRect(0,0,N,N);g.lineCap="round";
+  for(let f=0;f<5;f++){
+    const cx=Math.random()*N,cy=Math.random()*N,R=150+Math.random()*70,rot=Math.random()*6.28,
+      sx=.72+Math.random()*.12,p1=Math.random()*6.28,p2=Math.random()*6.28,op=.35+Math.random()*.35;
+    wrapDraw(g,N,function(g){
+      g.save();g.translate(cx,cy);g.rotate(rot);g.lineWidth=2.6;
+      for(let r=6;r<R;r+=7.7){
+        g.strokeStyle="rgba(255,255,255,"+(op*Math.pow(1-r/R,.6)).toFixed(3)+")";g.beginPath();
+        for(let i=0;i<=72;i++){const a=i/72*6.2832,rr=r*(1+.07*Math.sin(3*a+p1)+.04*Math.sin(5*a+p2));
+          const x=Math.cos(a)*rr*sx,y=Math.sin(a)*rr;i?g.lineTo(x,y):g.moveTo(x,y);}
+        g.stroke();
+      }
+      g.restore();});
+  }
+  const fp=g.getImageData(0,0,N,N).data;
+  g.fillStyle="#000";g.fillRect(0,0,N,N);
+  function scratch(n,lMin,lMax,wMin,wMax,aMin,aMax){
+    for(let i=0;i<n;i++){
+      const x=Math.random()*N,y=Math.random()*N,a=Math.random()*6.28,l=lMin+Math.random()*(lMax-lMin),
+        bend=(Math.random()-.5)*l*.25,w=wMin+Math.random()*(wMax-wMin),al=aMin+Math.random()*(aMax-aMin);
+      wrapDraw(g,N,function(g){
+        g.strokeStyle="rgba(255,255,255,"+al.toFixed(3)+")";g.lineWidth=w;g.beginPath();g.moveTo(x,y);
+        g.quadraticCurveTo(x+Math.cos(a)*l*.5-Math.sin(a)*bend,y+Math.sin(a)*l*.5+Math.cos(a)*bend,
+          x+Math.cos(a)*l,y+Math.sin(a)*l);g.stroke();});
+    }
+  }
+  scratch(70,80,520,.6,1.4,.35,.9);   // long hairlines
+  scratch(420,6,45,.5,.9,.15,.45);    // micro scuffs
+  const sc=g.getImageData(0,0,N,N).data;
+  const out=new Uint8Array(N*N*4);
+  for(let i=0;i<N*N;i++){
+    const s=Math.max(0,smear[i]-.55)/.45;
+    out[i*4]=grain[i]*255;
+    out[i*4+1]=Math.min(255,fp[i*4]+s*s*110);
+    out[i*4+2]=sc[i*4];
+    out[i*4+3]=255;
+  }
+  return dataTex(out,N);
+}
+// RG: droplet normal (tangent plane)  B: droplet appearance threshold
+// (255 = no droplet)  A: low-frequency film pattern
+function makeWetMap(){
+  const N=1024,H=new Float32Array(N*N),Tn=new Float32Array(N*N).fill(1),film=fbmTile(N,4,4,.5);
+  // 3.5 cm tile: 1 px ~ 0.034 mm, so drops of 0.2 - 2.5 mm radius are ~6 - 70 px
+  function drop(cx,cy,rx,ry,t){
+    const r=Math.max(rx,ry);
+    for(let y=Math.floor(cy-ry);y<=Math.ceil(cy+ry);y++)for(let x=Math.floor(cx-rx);x<=Math.ceil(cx+rx);x++){
+      const dx=(x-cx)/rx,dy=(y-cy)/ry,d=dx*dx+dy*dy;if(d>=1)continue;
+      const h=Math.sqrt(1-d)*r*.55,i=((y%N+N)%N)*N+((x%N+N)%N);
+      if(h>H[i]){H[i]=h;Tn[i]=t;}
+    }
+  }
+  // Beads keep a gap between them: surface tension pulls touching drops
+  // into one, so a real beaded surface never looks like overlapping bubbles.
+  // Rejection sampling (with wrap-around distance) enforces that.
+  const placed=[];
+  function clear(x,y,r){
+    for(let i=0;i<placed.length;i++){
+      const p=placed[i];let dx=Math.abs(p[0]-x),dy=Math.abs(p[1]-y);
+      dx=Math.min(dx,N-dx);dy=Math.min(dy,N-dy);
+      const m=(p[2]+r)*1.15;if(dx*dx+dy*dy<m*m)return false;
+    }
+    return true;
+  }
+  for(let tries=0;tries<9000&&placed.length<520;tries++){
+    const u=Math.random(),r=5*Math.pow(60/5,Math.pow(u,3)),sz=(r-5)/55;
+    const x=Math.random()*N,y=Math.random()*N;
+    if(!clear(x,y,r))continue;
+    placed.push([x,y,r]);
+    const e=1+Math.random()*.2;   // slightly out of round, like real beading
+    drop(x,y,r*e,r/e,.04+.9*Math.pow(Math.random(),.8)*(.55+.45*sz));
+  }
+  // a few runs: drops that slid, leaving a narrow trail above them
+  for(let k=0;k<10;k++){
+    const x=Math.random()*N,y=Math.random()*N,r=14+Math.random()*16,t=.35+Math.random()*.6,len=4+Math.random()*7;
+    drop(x,y,r,r*1.25,t);
+    for(let s=1;s<len;s++)drop(x+(Math.random()-.5)*3,y+r*1.1+s*r*.7,r*.42*(1-s/len*.5),r*.5,t);
+  }
+  const out=new Uint8Array(N*N*4);
+  for(let y=0;y<N;y++)for(let x=0;x<N;x++){
+    const i=y*N+x,xl=y*N+(x+N-1)%N,xr=y*N+(x+1)%N,yd=((y+N-1)%N)*N+x,yu=((y+1)%N)*N+x;
+    let nx=-(H[xr]-H[xl])*.5,ny=-(H[yu]-H[yd])*.5;
+    const L=Math.sqrt(nx*nx+ny*ny+1);nx/=L;ny/=L;
+    out[i*4]=(nx*.5+.5)*255;out[i*4+1]=(ny*.5+.5)*255;
+    out[i*4+2]=Tn[i]*255;out[i*4+3]=film[i]*255;
+  }
+  return dataTex(out,N);
+}
+function fxEnsureAssets(){
+  if(FX.assetsReady)return;
+  FXU.fxRoughMap.value=makeRoughMap();
+  FXU.fxWetMap.value=makeWetMap();
+  FX.assetsReady=true;
+}
 
 function backdropTexNew(){
   const N=1024,cv=document.createElement("canvas");cv.width=cv.height=N;const g=cv.getContext("2d");
@@ -446,6 +901,7 @@ const BACKDROPS=[
 const backdrop=new THREE.Mesh(new THREE.PlaneGeometry(1,1),
   new THREE.MeshStandardMaterial({map:backdropTexNew(),roughness:.94,metalness:.06}));
 backdrop.position.z=-2.4;backdrop.receiveShadow=true;backdrop.scale.set(9,9,1);scene.add(backdrop);
+fxProfile(backdrop.material,{water:0,fine:0});
 function applyBackdropStyle(){
   const d=BACKDROPS[S.backdrop];
   if(backdrop.material.map) backdrop.material.map.dispose();
@@ -455,7 +911,7 @@ function applyBackdropStyle(){
   // The contact shadow was tuned against the darker New backdrop. On the
   // pale, soft Classic recipe that same dark blob reads as an unwanted
   // smudge under the phone rather than a grounding cue, so it's off there.
-  contactShadow.visible=(d.k!=="classic");
+  contactShadow.visible=(d.k!=="classic")&&!FX.on;
 }
 function applyBackground(){
   backdrop.material.color.setHex(BG_COLORS[S.bg].hex);
@@ -556,16 +1012,116 @@ function buildEnv(contrast){
   }
   return s;
 }
+/* Realistic studio, in real (linear, unclamped) radiance. The Studio env
+   above is tuned to look good through heavy per-material env boosts; this
+   one is lit the way a product set actually is, so every material can use
+   env intensity 1:
+   - key softbox in the same direction as the shadow-casting key light. Its
+     reflection is the crisp rectangular highlight on glossy parts; the
+     punctual light only supplies the (shadowed) diffuse.
+   - two strip boxes behind, left and right, for the rim lines along edges
+   - a big dim bounce card as fill, a scrim overhead
+   - a cyc that falls off from mid-grey to near-black, so glass has
+     something dark to reflect too
+   Panels get a soft edge falloff; hard-edged emitters alias in the PMREM. */
+function softPanelTex(){
+  const N=256,cv=document.createElement("canvas");cv.width=cv.height=N;const g=cv.getContext("2d");
+  // soft edge from a bilinear upscale of a tiny canvas (ctx.filter blur
+  // isn't supported in Safari)
+  const sm=document.createElement("canvas");sm.width=sm.height=20;const sg=sm.getContext("2d");
+  sg.fillStyle="#000";sg.fillRect(0,0,20,20);sg.fillStyle="#fff";sg.fillRect(2,2,16,16);
+  g.imageSmoothingEnabled=true;g.drawImage(sm,0,0,N,N);
+  // diffusion fabric is a little hotter in the middle
+  const r=g.createRadialGradient(N/2,N/2,0,N/2,N/2,N*.5);
+  r.addColorStop(0,"rgba(255,255,255,0)");r.addColorStop(1,"rgba(0,0,0,.22)");
+  g.globalCompositeOperation="multiply";g.fillStyle=r;g.fillRect(0,0,N,N);
+  const t=new THREE.CanvasTexture(cv),px=g.getImageData(0,0,N,N).data;
+  let sum=0;for(let i=0;i<px.length;i+=4)sum+=px[i];
+  t.userData.mean=sum/(N*N*255);   // average emission, for keyIrradiance()
+  return t;
+}
+// Irradiance the key softbox delivers at the subject: radiance x solid angle
+// of the (rectangular) panel x its average emission. The directional key uses
+// exactly this, so the shadowed diffuse it supplies is the diffuse the panel
+// would have given (the irradiance map is baked without the panel).
+function keyIrradiance(){
+  if(!SOFT_PANEL) SOFT_PANEL=softPanelTex();
+  const d=PBR_KEY.dist,w=PBR_KEY.w,h=PBR_KEY.h;
+  const omega=4*Math.atan(w*h/(2*d*Math.sqrt(4*d*d+w*w+h*h)));
+  return PBR_KEY.radiance*omega*SOFT_PANEL.userData.mean;
+}
+let SOFT_PANEL=null,GRAD_CARD=null;
+function gradCardTex(){
+  const N=256,cv=document.createElement("canvas");cv.width=cv.height=N;const g=cv.getContext("2d");
+  const l=g.createLinearGradient(0,0,N*.35,N);
+  l.addColorStop(0,"#fff");l.addColorStop(.45,"#8a8a8a");l.addColorStop(1,"#050505");
+  g.fillStyle=l;g.fillRect(0,0,N,N);
+  return new THREE.CanvasTexture(cv);
+}
+function buildEnvRealistic(contrast,withoutKey){
+  if(!SOFT_PANEL) SOFT_PANEL=softPanelTex();
+  const s=new THREE.Scene();s.background=new THREE.Color(0,0,0);
+  // cyc: vertical gradient on a big sphere
+  const cyc=new THREE.SphereGeometry(20,48,24),col=[],p=cyc.attributes.position;
+  // everything but the key is kept to roughly a third of its light, the
+  // classic 3:1 product ratio, so the key's shadows actually read
+  const wall=contrast?.01:.07,top=contrast?.05:.16,floor=contrast?.004:.03;
+  for(let i=0;i<p.count;i++){const y=p.getY(i)/20;
+    const v=y>0?MU.lerp(wall,top,Math.pow(y,1.5)):MU.lerp(wall,floor,Math.pow(-y,.7));
+    col.push(v,v*.98,v*1.03);}
+  cyc.setAttribute("color",new THREE.Float32BufferAttribute(col,3));
+  s.add(new THREE.Mesh(cyc,new THREE.MeshBasicMaterial({vertexColors:true,side:THREE.BackSide})));
+  function panel(w,h,hex,radiance,pos){
+    const m=new THREE.Mesh(new THREE.PlaneGeometry(w,h),new THREE.MeshBasicMaterial({
+      color:new THREE.Color(hex).multiplyScalar(radiance),map:SOFT_PANEL,side:THREE.DoubleSide}));
+    m.position.copy(pos);m.lookAt(0,0,0);s.add(m);return m;
+  }
+  const keyDir=PBR_KEY.pos.clone().normalize();
+  // the key: subtends ~PBR_KEY.angle, matching the PCSS penumbra size
+  if(!withoutKey)
+    panel(PBR_KEY.w,PBR_KEY.h,0xFFF4E8,PBR_KEY.radiance,keyDir.clone().multiplyScalar(PBR_KEY.dist));
+  panel(.55,5,0xEAF2FF,11,new V3(-4.2,.6,-2.2));
+  panel(.55,5,0xFFEEF6,9,new V3(4.4,.2,-1.8));
+  panel(5,4,0xFFFFFF,contrast?.45:.9,new V3(-4.6,-.4,3.2));
+  panel(7,7,0xFFFFFF,contrast?.2:.55,new V3(0,6,0));
+  // gradient reflector behind the camera: flat glossy faces pointed at the
+  // lens (the phone's back, a charm's face) pick up a smooth light-to-dark
+  // sweep instead of one flat tone -- the classic product-shot reflection
+  if(!GRAD_CARD) GRAD_CARD=gradCardTex();
+  panel(9,6,0xFFFFFF,contrast?.8:1.5,new V3(1.2,.8,6.5)).material.map=GRAD_CARD;
+  // and one on the right: at the hero angle the phone's back mirrors +x
+  panel(6,6,0xFFF6FA,contrast?.7:1.3,new V3(5.4,.6,1.4)).material.map=GRAD_CARD;
+  if(contrast){
+    // black flags beside the key: the drop from hot to black across a
+    // bevel is what reads as crisp, hard glass
+    const f=new THREE.MeshBasicMaterial({color:0x000000,side:THREE.DoubleSide});
+    [[-1.7,0],[1.7,0]].forEach(function(o){
+      const m=new THREE.Mesh(new THREE.PlaneGeometry(1.2,2.4),f);
+      m.position.copy(keyDir.clone().multiplyScalar(4.3));m.lookAt(0,0,0);m.translateX(o[0]);s.add(m);});
+  }
+  return s;
+}
+// materials only: the shared panel/card textures are reused on every rebuild
+function disposeScene(s){s.traverse(function(o){if(o.geometry)o.geometry.dispose();
+  if(o.material)o.material.dispose();});}
 const REFLECTIONS=[
   {k:"soft",    n:"Soft",     ko:"소프트",   zh:"柔和",    ja:"ソフト",       contrast:false},
   {k:"contrast",n:"Contrast", ko:"고대비",   zh:"高对比",  ja:"コントラスト", contrast:true},
 ];
 const pmrem=new THREE.PMREMGenerator(renderer);pmrem.compileEquirectangularShader();
-let envRT=null;
+let envRT=null,irrRT=null;
 // lower sigma than before: less pre-blur means the small glints above stay
 // crisp points instead of smearing into the same soft glow as the fill.
 function applyEnvironment(){
-  const rt=pmrem.fromScene(buildEnv(REFLECTIONS[S.env].contrast),0.008,0.1,60);
+  const contrast=REFLECTIONS[S.env].contrast;
+  let rt;
+  if(irrRT){irrRT.dispose();irrRT=null;}
+  if(FX.on){
+    let es=buildEnvRealistic(contrast,false);rt=pmrem.fromScene(es,0,0.1,60);disposeScene(es);
+    es=buildEnvRealistic(contrast,true);irrRT=pmrem.fromScene(es,0,0.1,60);disposeScene(es);
+    FXU.fxIrrMap.value=irrRT.texture;
+  }
+  else rt=pmrem.fromScene(buildEnv(contrast),0.008,0.1,60);
   scene.environment=rt.texture;
   if(envRT) envRT.dispose();
   envRT=rt;
@@ -573,13 +1129,14 @@ function applyEnvironment(){
 applyEnvironment();
 
 const key=new THREE.DirectionalLight(0xFFF3E4,1.55);
-key.position.set(2.6,3.6,3.4);key.castShadow=true;
+key.position.copy(PBR_KEY.pos);key.castShadow=true;
 key.shadow.mapSize.set(1024,1024);key.shadow.radius=4;key.shadow.bias=-.0013;
 key.shadow.camera.left=-3;key.shadow.camera.right=3;
 key.shadow.camera.top=3;key.shadow.camera.bottom=-3;
 key.shadow.camera.near=.5;key.shadow.camera.far=15;
 scene.add(key);
-scene.add(new THREE.HemisphereLight(0xD6D6E4,0x33333C,.26));
+const hemi=new THREE.HemisphereLight(0xD6D6E4,0x33333C,.26);
+scene.add(hemi);
 
 function sparkTex(){
   const N=128,cv=document.createElement("canvas");cv.width=cv.height=N;const g=cv.getContext("2d");
@@ -713,25 +1270,31 @@ const SPARKLE=sparkleTex();
 /* ===================================================================
    MATERIALS
    =================================================================== */
-const matSilver=new THREE.MeshPhysicalMaterial({color:0xE9E9F2,roughness:.13,metalness:1,
-  clearcoat:1,clearcoatRoughness:.06,envMapIntensity:2.1});
+const matSilver=fxProfile(new THREE.MeshPhysicalMaterial({color:0xE9E9F2,roughness:.13,metalness:1,
+  clearcoat:1,clearcoatRoughness:.06,envMapIntensity:2.1}),{metal:1,fine:.25,smudge:.05,scratch:.14});
 const matPendantMetal=matSilver.clone();
-const matPearl=new THREE.MeshPhysicalMaterial({color:0xFFF8F2,roughness:.10,metalness:.28,
-  clearcoat:1,clearcoatRoughness:.05,envMapIntensity:2.3});
-const matIrid=new THREE.MeshPhysicalMaterial({color:0xFFF2FA,transparent:true,opacity:.66,
+// nacre: a dielectric with thin-film "orient", not a partial metal
+const matPearl=fxProfile(new THREE.MeshPhysicalMaterial({color:0xFFF8F2,roughness:.10,metalness:.28,
+  clearcoat:1,clearcoatRoughness:.05,envMapIntensity:2.3}),{metal:0,rough:.16,fine:.3,film:.55,nm:420});
+const matIrid=fxProfile(new THREE.MeshPhysicalMaterial({color:0xFFF2FA,transparent:true,opacity:.66,
   roughness:.06,metalness:.32,clearcoat:1,clearcoatRoughness:.04,envMapIntensity:2.6,
-  side:THREE.DoubleSide,depthWrite:false});
-const matBead=new THREE.MeshPhysicalMaterial({color:0xFFB7D2,transparent:true,opacity:.62,
-  roughness:.05,metalness:0,clearcoat:1,clearcoatRoughness:.03,envMapIntensity:1.8,depthWrite:false});
-const matCord=new THREE.MeshStandardMaterial({color:0xFFD3E2,roughness:.72,metalness:.04});
+  side:THREE.DoubleSide,depthWrite:false}),{metal:0,film:.95,nm:560});
+const matBead=fxProfile(new THREE.MeshPhysicalMaterial({color:0xFFB7D2,transparent:true,opacity:.62,
+  roughness:.05,metalness:0,clearcoat:1,clearcoatRoughness:.03,envMapIntensity:1.8,depthWrite:false}),
+  {smudge:.04});
+// Physical rather than Standard so Realistic mode can lay a water film over
+// it; with no clearcoat/sheen set it shades identically to Standard.
+const matCord=fxProfile(new THREE.MeshPhysicalMaterial({color:0xFFD3E2,roughness:.72,metalness:.04}),
+  {por:.9,metal:0,fine:.7});
 // small solid dark eyes (bunny) -- a glossy near-black, matching the thick
 // ink outline used throughout the 2D character art elsewhere in the app.
 const matInk=new THREE.MeshPhysicalMaterial({color:0x241E28,roughness:.25,metalness:0,
   clearcoat:1,clearcoatRoughness:.15,envMapIntensity:1.4});
 /* keycap: moulded PBT, semi-matte with a faint sheen. keybed: thick clear
    acrylic, low roughness and high env so the bevelled edges catch light. */
-const matKeycap=new THREE.MeshPhysicalMaterial({color:0xFFF5E9,roughness:.32,metalness:.02,
-  clearcoat:.5,clearcoatRoughness:.32,envMapIntensity:1.15});
+// PBT's sandy texture is the grain channel doing most of the work here
+const matKeycap=fxProfile(new THREE.MeshPhysicalMaterial({color:0xFFF5E9,roughness:.32,metalness:.02,
+  clearcoat:.5,clearcoatRoughness:.32,envMapIntensity:1.15}),{metal:0,rough:.42,fine:.8,smudge:.08,por:.12});
 // FrontSide, not DoubleSide: the keybed is a HOLLOW extruded frame (walls
 // around a cavity), so from most angles the camera looks through the near
 // outer wall, the near inner wall, the far inner wall, AND the far outer
@@ -747,26 +1310,28 @@ const matKeycap=new THREE.MeshPhysicalMaterial({color:0xFFF5E9,roughness:.32,met
 // the riser's actual cross-section (~15-20% of its width), not to the whole
 // pendant -- too large a thickness smears the refraction into soft ghosting
 // instead of a crisp "looking through glass" effect.
-const matKeybed=new THREE.MeshPhysicalMaterial({color:0xFAFBFF,
+const matKeybed=fxProfile(new THREE.MeshPhysicalMaterial({color:0xFAFBFF,
   roughness:.028,metalness:0,
   transmission:1.0,thickness:.048,ior:1.55,
   clearcoat:1,clearcoatRoughness:.028,
   envMapIntensity:2.6,side:THREE.FrontSide,
-  transparent:false,depthWrite:true});
-const matAcrylic=new THREE.MeshPhysicalMaterial({color:0xFAFBFF,
+  transparent:false,depthWrite:true}),{smudge:.10,scratch:.05});
+const matAcrylic=fxProfile(new THREE.MeshPhysicalMaterial({color:0xFAFBFF,
   roughness:.032,metalness:0,
   transmission:1.0,thickness:.05,ior:1.55,
   attenuationColor:new THREE.Color(COLORS[1].hex),attenuationDistance:.16,
   clearcoat:1,clearcoatRoughness:.024,
   envMapIntensity:2.4,side:THREE.FrontSide,
-  transparent:false,depthWrite:true});
-const matMatte=new THREE.MeshStandardMaterial({color:0xFF9CBE,roughness:.62,metalness:.02});
+  transparent:false,depthWrite:true}),{smudge:.08,scratch:.05});
+// felt/paper insert behind the frame's art: soaks up water and darkens
+const matMatte=fxProfile(new THREE.MeshPhysicalMaterial({color:0xFF9CBE,roughness:.62,metalness:.02}),
+  {por:.75,metal:0,fine:.5});
 const artCv=document.createElement("canvas");artCv.width=artCv.height=512;
 const artG=artCv.getContext("2d");
 const artTex=new THREE.CanvasTexture(artCv);
 artTex.encoding=THREE.sRGBEncoding;artTex.anisotropy=renderer.capabilities.getMaxAnisotropy();
-const matArt=new THREE.MeshStandardMaterial({map:artTex,transparent:true,roughness:.55,
-  metalness:0,envMapIntensity:.45,side:THREE.DoubleSide,alphaTest:.02});
+const matArt=fxProfile(new THREE.MeshStandardMaterial({map:artTex,transparent:true,roughness:.55,
+  metalness:0,envMapIntensity:.45,side:THREE.DoubleSide,alphaTest:.02}),{por:.25,env:.8});
 
 /* ===================================================================
    PHONE
@@ -779,9 +1344,11 @@ const phone=new THREE.Group();scene.add(phone);
 const baseQuat=new Q().setFromEuler(new THREE.Euler(-0.38,-2.40,0.11,"YXZ"));
 phone.quaternion.copy(baseQuat);
 
+// Realistic: a lacquered glass back, where fingerprints show most
 const bodyMesh=new THREE.Mesh(extrude(roundRectShape(PH.w,PH.h,.155),PH.d,.016),
-  new THREE.MeshPhysicalMaterial({color:0xD9DCE3,roughness:.12,metalness:.28,
-    clearcoat:1,clearcoatRoughness:.035,reflectivity:.8,envMapIntensity:2.0}));
+  fxProfile(new THREE.MeshPhysicalMaterial({color:0xD9DCE3,roughness:.12,metalness:.28,
+    clearcoat:1,clearcoatRoughness:.035,reflectivity:.8,envMapIntensity:2.0}),
+    {metal:0,fine:.3,smudge:.12,scratch:.04}));
 bodyMesh.castShadow=true;phone.add(bodyMesh);
 
 function wallpaperTex(){
@@ -796,24 +1363,27 @@ function wallpaperTex(){
   const t=new THREE.CanvasTexture(cv);t.encoding=THREE.sRGBEncoding;return t;
 }
 const wp=wallpaperTex();
+// cover glass: nearly perfect, which is exactly why smudges read on it
 const screenMesh=new THREE.Mesh(new THREE.ShapeGeometry(roundRectShape(PH.w-.07,PH.h-.07,.095)),
-  new THREE.MeshPhysicalMaterial({color:0x090B10,roughness:.035,metalness:.05,
+  fxProfile(new THREE.MeshPhysicalMaterial({color:0x090B10,roughness:.035,metalness:.05,
     clearcoat:1,clearcoatRoughness:.025,reflectivity:.95,
-    envMapIntensity:2.8,emissive:0x000000,emissiveIntensity:0}));
+    envMapIntensity:2.8,emissive:0x000000,emissiveIntensity:0}),{metal:0,rough:.02,fine:.1,smudge:.32,scratch:.06}));
 screenMesh.position.z=PH.d/2+.002;phone.add(screenMesh);
 
 const camModule=new THREE.Group();
 camModule.position.set(CAM_X,CAM_Y,-PH.d/2-.020);
 camModule.rotation.y=Math.PI;phone.add(camModule);
 camModule.add((function(){
+  // anodised aluminium plateau
   const m=new THREE.Mesh(extrude(roundRectShape(.40,.40,.115),.05,.012),
-    new THREE.MeshPhysicalMaterial({color:0xC8B8D9,roughness:.13,metalness:.42,
-      clearcoat:1,clearcoatRoughness:.035,envMapIntensity:2.4}));
+    fxProfile(new THREE.MeshPhysicalMaterial({color:0xC8B8D9,roughness:.13,metalness:.42,
+      clearcoat:1,clearcoatRoughness:.035,envMapIntensity:2.4}),{metal:1,rough:.24,fine:.35,scratch:.06}));
   m.castShadow=true;return m;})());
-const lensRingMat=new THREE.MeshPhysicalMaterial({color:0xFF9FC5,roughness:.09,metalness:.82,
-  clearcoat:1,clearcoatRoughness:.02,envMapIntensity:2.8});
-const lensGlass=new THREE.MeshPhysicalMaterial({color:0x111927,roughness:.035,metalness:.32,
-  clearcoat:1,clearcoatRoughness:.015,reflectivity:1,envMapIntensity:3.2});
+const lensRingMat=fxProfile(new THREE.MeshPhysicalMaterial({color:0xFF9FC5,roughness:.09,metalness:.82,
+  clearcoat:1,clearcoatRoughness:.02,envMapIntensity:2.8}),{metal:1,scratch:.05});
+// sapphire cover: dark dielectric, all of its look is reflection
+const lensGlass=fxProfile(new THREE.MeshPhysicalMaterial({color:0x111927,roughness:.035,metalness:.32,
+  clearcoat:1,clearcoatRoughness:.015,reflectivity:1,envMapIntensity:3.2}),{metal:0,rough:.02,smudge:.1});
 const lensRingGeo=new THREE.TorusGeometry(.072,.012,12,30);
 const lensGeo=new THREE.CircleGeometry(.061,30);
 [[-.085,.085],[.085,-.085]].forEach(function(p){
@@ -846,12 +1416,13 @@ function caseRimGeometry(){
 // facing the camera.
 // thickness matched to the case shell's actual wall thickness (bevel ~.02),
 // not the whole phone -- a thin shell should only bend light a little.
-const caseMat=new THREE.MeshPhysicalMaterial({color:0xF8FAFF,
+// cases live in pockets: fingerprints plus a fair amount of scuffing
+const caseMat=fxProfile(new THREE.MeshPhysicalMaterial({color:0xF8FAFF,
   roughness:.026,metalness:0,
   transmission:.92,thickness:.022,ior:1.55,
   clearcoat:1,clearcoatRoughness:.026,
   envMapIntensity:2.6,side:THREE.FrontSide,
-  transparent:false,depthWrite:true});
+  transparent:false,depthWrite:true}),{fine:.15,smudge:.12,scratch:.09});
 const caseMesh=new THREE.Mesh(caseGeometry(),caseMat);
 caseMesh.castShadow=true;caseMesh.renderOrder=3;
 caseMesh.position.z=-PH.d/2-.018;phone.add(caseMesh);
@@ -908,6 +1479,9 @@ function applyCase(){
   caseMat.clearcoatRoughness=.045;caseMat.ior=1.55;
   caseMat.envMapIntensity=Math.max(c.env,2.4);
   caseMat.needsUpdate=true;
+  // Once the phone itself receives shadows (Realistic), a clear case casting
+  // a solid shadow would black out the phone it's wrapped around.
+  caseMesh.castShadow=caseRim.castShadow=!(FX.on&&c.trans>.5);
 }
 
 /* ===================================================================
@@ -1510,8 +2084,8 @@ const geoCrimp=new THREE.CylinderGeometry(1,1,1,12);
 const geoCord=new THREE.CylinderGeometry(1,1,1,8);
 const geoLink=new THREE.TorusGeometry(.0105,.0035,10,22);
 const geoFlowerBead=extrude(sakuraShape(.036,5),.018,.005,18);
-const matChain=new THREE.MeshPhysicalMaterial({color:0x9AA0AE,roughness:.13,metalness:.95,
-  clearcoat:1,clearcoatRoughness:.02,envMapIntensity:2.8});
+const matChain=fxProfile(new THREE.MeshPhysicalMaterial({color:0x9AA0AE,roughness:.13,metalness:.95,
+  clearcoat:1,clearcoatRoughness:.02,envMapIntensity:2.8}),{metal:1,fine:.25,scratch:.12});
 
 /* curve resampling */
 const SAMP=48, CORDSEG=22;
@@ -1698,7 +2272,11 @@ let yaw=0,pitch=0,yawV=0,pitchV=0;
 const tiltQuat=new Q(),tiltCorrection=new Q(-Math.SQRT1_2,0,0,Math.SQRT1_2);
 const tiltScreenQuat=new Q(),tiltEuler=new THREE.Euler(),tiltZee=new V3(0,0,1);
 let tiltReady=false,tiltListening=false;
-let zoom=1,pinchStart=0,pinchZoom=1;
+let zoom=1,pinchStart=0,pinchZoom=1,pinchLast=0;
+// The camera eases toward camGoal every frame. Locked zoom keeps it on the
+// home axis; free zoom moves it anywhere (view direction never changes, so
+// the charm's "hero" angle is preserved while you move in close).
+const camGoal=new V3();let camReady=false;
 const phoneTarget=new V3(0,.34,0);
 phone.position.copy(phoneTarget);
 const pointers=new Map();
@@ -1713,10 +2291,100 @@ function toWorld(cx,cy){
   ndc.x=((cx-r.left)/r.width)*2-1;ndc.y=-((cy-r.top)/r.height)*2+1;
   ray.setFromCamera(ndc,camera);ray.ray.intersectPlane(plane,hitP);return hitP;
 }
+function homeZ(z){
+  const aspect=camera.aspect||innerWidth/innerHeight;
+  return MU.clamp(3.7/Math.min(aspect,.62),4.3,6.8)*z;
+}
 function setZoom(next){
   zoom=MU.clamp(next,.55,1.55);
-  const aspect=camera.aspect||innerWidth/innerHeight;
-  camera.position.z=MU.clamp(3.7/Math.min(aspect,.62),4.3,6.8)*zoom;
+  if(!S.freeZoom) camGoal.set(0,VIEW_Y,homeZ(zoom));
+}
+
+/* ---- free zoom + focus ----
+   Wheel/pinch dollies the camera along the ray under the cursor, so the
+   point you're pointing at stays under the cursor while it grows -- that's
+   what lets you get right up to one bead on the strand. Zooming out folds
+   back toward the home framing, so you can't get lost. */
+const FREE_MIN_DIST=.1;                  // 1 cm, about as close as a macro lens focuses
+const zoomCam=new THREE.PerspectiveCamera(),_home=new V3(),_fw=new V3(),_fp=new V3();
+function pickAt(cx,cy,cam){
+  const r=canvas.getBoundingClientRect();
+  ndc.x=((cx-r.left)/r.width)*2-1;ndc.y=-((cy-r.top)/r.height)*2+1;
+  ray.setFromCamera(ndc,cam||camera);
+  const hits=ray.intersectObjects(scene.children,true);
+  for(let i=0;i<hits.length;i++){
+    const o=hits[i].object;
+    // the raycaster doesn't skip hidden meshes (spare strand beads)
+    if(o.visible&&o!==contactShadow&&sparks.indexOf(o)<0) return hits[i];
+  }
+  return null;
+}
+function zoomAt(cx,cy,factor){
+  _home.set(0,VIEW_Y,homeZ(zoom));
+  if(factor>=1){
+    camGoal.lerp(_home,Math.min(1,(factor-1)*2.5));
+    if(camGoal.distanceTo(_home)<.02) camGoal.copy(_home);
+    return;
+  }
+  zoomCam.copy(camera);zoomCam.position.copy(camGoal);zoomCam.updateMatrixWorld();
+  const h=pickAt(cx,cy,zoomCam);
+  const d=h?h.distance:Math.max(camGoal.z,.5);
+  const nd=Math.max(d*factor,Math.min(d,FREE_MIN_DIST));
+  camGoal.addScaledVector(ray.ray.direction,d-nd);
+  camGoal.set(MU.clamp(camGoal.x,-3,3),MU.clamp(camGoal.y,-3,3),Math.min(camGoal.z,_home.z));
+  if(h) setFocus(h,false);
+}
+function setFreeZoom(on){
+  S.freeZoom=on;
+  if(on) toast(T("freeZoomHint"),4200);
+  else camGoal.set(0,VIEW_Y,homeZ(zoom));
+}
+// Focus is pinned to a point on an object (in its local space), so it rides
+// along as the charm swings. Default: the charm itself.
+const focus={obj:null,local:new V3(),dist:5,ringUntil:0};
+const focusRingEl=document.getElementById("focusRing");
+function setFocus(hit,showRing){
+  focus.obj=hit.object;focus.local.copy(hit.point);hit.object.worldToLocal(focus.local);
+  if(showRing&&FX.on&&S.dof) focus.ringUntil=performance.now()+1100;
+}
+function inScene(o){while(o){if(o===scene)return true;o=o.parent;}return false;}
+function focusWorld(out){
+  if(focus.obj&&inScene(focus.obj)) return focus.obj.localToWorld(out.copy(focus.local));
+  focus.obj=null;
+  return out.copy(charm.position);
+}
+function updateFocus(dt){
+  focusWorld(_fp);
+  _fw.set(0,0,-1).applyQuaternion(camera.quaternion);
+  const want=Math.max(_fp.sub(camera.position).dot(_fw),.02);
+  // a quick but visible pull, like a real autofocus motor
+  focus.dist+=(want-focus.dist)*(1-Math.pow(.0004,Math.max(dt,0)));
+  const show=performance.now()<focus.ringUntil;
+  if(show){
+    focusWorld(_fp).project(camera);
+    const r=canvas.getBoundingClientRect();
+    focusRingEl.style.left=(r.left+(_fp.x*.5+.5)*r.width)+"px";
+    focusRingEl.style.top=(r.top+(-_fp.y*.5+.5)*r.height)+"px";
+  }
+  focusRingEl.classList.toggle("show",show);
+}
+const toastEl=document.getElementById("toast");let toastTimer=0;
+function toast(msg,ms){
+  toastEl.textContent=msg;toastEl.classList.add("show");
+  clearTimeout(toastTimer);toastTimer=setTimeout(function(){toastEl.classList.remove("show");},ms||3200);
+}
+// double-tap / double-click to focus
+let tapStart=null,lastTap=null;
+function onTapEnd(e){
+  if(!tapStart||tapStart.id!==e.pointerId)return;
+  const now=performance.now(),t=tapStart,moved=Math.hypot(e.clientX-t.x,e.clientY-t.y);
+  tapStart=null;
+  if(moved>10||now-t.t>350)return;
+  if(lastTap&&now-lastTap.t<380&&Math.hypot(e.clientX-lastTap.x,e.clientY-lastTap.y)<40){
+    const h=pickAt(e.clientX,e.clientY);
+    if(h) setFocus(h,true);
+    lastTap=null;
+  } else lastTap={x:e.clientX,y:e.clientY,t:now};
 }
 function pointerDistance(){
   const points=Array.from(pointers.values()),a=points[0],b=points[1];
@@ -1739,13 +2407,16 @@ function moveAttachment(cx,cy){
 }
 canvas.addEventListener("contextmenu",function(e){e.preventDefault();});
 canvas.addEventListener("wheel",function(e){
-  e.preventDefault();setZoom(zoom*Math.exp(e.deltaY*.001));
+  e.preventDefault();
+  if(S.freeZoom) zoomAt(e.clientX,e.clientY,Math.exp(e.deltaY*.0015));
+  else setZoom(zoom*Math.exp(e.deltaY*.001));
 },{passive:false});
 canvas.addEventListener("pointerdown",function(e){
   canvas.setPointerCapture(e.pointerId);
   pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
   hintEl.classList.add("gone");
-  if(pointers.size===2){pinchStart=pointerDistance();pinchZoom=zoom;}
+  tapStart=pointers.size===1?{id:e.pointerId,x:e.clientX,y:e.clientY,t:performance.now()}:null;
+  if(pointers.size===2){pinchStart=pointerDistance();pinchZoom=zoom;pinchLast=pinchStart;}
   ray.setFromCamera(ndc.set(
     ((e.clientX-canvas.getBoundingClientRect().left)/canvas.getBoundingClientRect().width)*2-1,
     -((e.clientY-canvas.getBoundingClientRect().top)/canvas.getBoundingClientRect().height)*2+1),camera);
@@ -1763,7 +2434,13 @@ canvas.addEventListener("pointermove",function(e){
   pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
   if(pointers.size>=2){
     const distance=pointerDistance();
-    if(distance>1&&pinchStart>1)setZoom(pinchZoom*pinchStart/distance);
+    if(S.freeZoom){
+      // zoom toward the midpoint between the fingers
+      const pts=Array.from(pointers.values());
+      if(distance>1&&pinchLast>1)
+        zoomAt((pts[0].x+pts[1].x)/2,(pts[0].y+pts[1].y)/2,pinchLast/distance);
+      pinchLast=distance;
+    } else if(distance>1&&pinchStart>1)setZoom(pinchZoom*pinchStart/distance);
   }
   if(mode==="hook"){
     moveAttachment(e.clientX,e.clientY);
@@ -1783,6 +2460,7 @@ canvas.addEventListener("pointermove",function(e){
   }
 });
 function endPointer(e){
+  if(e.type==="pointerup") onTapEnd(e); else tapStart=null;
   pointers.delete(e.pointerId);
   if(pointers.size===0) mode=null;
 }
@@ -1791,6 +2469,7 @@ function endPointer(e){
 
 document.getElementById("reset").addEventListener("click",function(){
   yaw=0;pitch=0;yawV=0;pitchV=0;setZoom(1);phoneTarget.set(0,.34,0);
+  camGoal.set(0,VIEW_Y,homeZ(1));focus.obj=null;
   attachmentLocal.copy(HOOK_DEFAULT);updateAttachment();
 });
 
@@ -1894,16 +2573,54 @@ function artThumb(k){
   const g=cv.getContext("2d");g.lineJoin="round";g.lineCap="round";
   ART[k](g,512,"#FFC0CF");return cv.toDataURL();
 }
-function slider(min,max,val,fmt,on){
+// label/ko/aria/row default to the original chain-length slider
+function slider(min,max,val,fmt,on,o){
+  o=o||{};
+  const row=o.row||row2El;
   const lab=document.createElement("span");lab.className="sldlab";
-  lab.innerHTML=T("length")+' <span class="ko">길이</span>';
+  lab.innerHTML=(o.label||T("length"))+' <span class="ko">'+(o.ko||"길이")+'</span>';
   const inp=document.createElement("input");
   inp.type="range";inp.className="sld";
   inp.min=min;inp.max=max;inp.step=(max-min)/100;inp.value=val;
-  inp.setAttribute("aria-label","Chain length");
+  inp.setAttribute("aria-label",o.aria||T("chainLength"));
   const out=document.createElement("span");out.className="sldval";out.textContent=fmt(val);
   inp.oninput=function(){const v=parseFloat(inp.value);out.textContent=fmt(v);on(v);};
-  row2El.appendChild(lab);row2El.appendChild(inp);row2El.appendChild(out);
+  row.appendChild(lab);row.appendChild(inp);row.appendChild(out);
+}
+
+/* ---- render mode ---- */
+const RENDER_MODES=[
+  {k:"studio",   n:"Studio",   ko:"스튜디오", zh:"工作室", ja:"スタジオ"},
+  {k:"realistic",n:"Realistic",ko:"리얼",     zh:"写实",   ja:"リアル"},
+];
+// exposure for the realistic studio, in the post shader's linear space
+const PBR_EXPOSURE=1.7;
+function applyRenderMode(){
+  const on=S.render===1;
+  if(on) fxEnsureAssets();
+  FX.on=on;FX.epoch++;        // every lit material recompiles into the other variant
+  renderer.physicallyCorrectLights=on;
+  // Realistic renders linear HDR and tone-maps in the post chain instead
+  renderer.toneMapping=on?THREE.NoToneMapping:THREE.ACESFilmicToneMapping;
+  key.intensity=on?keyIrradiance():1.55;
+  hemi.visible=!on;           // the environment is the only ambient light
+  const sh=key.shadow;
+  sh.mapSize.set(on?2048:1024,on?2048:1024);
+  if(sh.map){sh.map.dispose();sh.map=null;}
+  sh.bias=on?-.0004:-.0013;sh.normalBias=on?.008:0;
+  sh.camera.near=on?PBR_KEY.near:.5;sh.camera.far=on?PBR_KEY.far:15;
+  sh.camera.updateProjectionMatrix();
+  // painted floating sparkles and the fake blob shadow are Studio stylisation
+  sparks.forEach(function(s){s.visible=!on;});
+  contactShadow.visible=!on&&BACKDROPS[S.backdrop].k!=="classic";
+  // alpha-blended beads must write depth or depth of field blurs them with
+  // whatever is behind them
+  matBead.depthWrite=matIrid.depthWrite=on;
+  document.body.classList.toggle("pbr",on);
+  POST.final.uniforms.exposure.value=PBR_EXPOSURE;
+  FXU.fxWet.value=S.wet;
+  applyCase();
+  applyEnvironment();
 }
 const TABS=[
   {en:"Case",zh:"手机壳",ja:"ケース",ko:"케이스",build:function(){
@@ -1955,6 +2672,30 @@ const TABS=[
     BACKDROPS.forEach(function(d,i){row3El.appendChild(chip(nameOf(d),d.ko,function(){
       S.backdrop=i;applyBackdropStyle();paint();},i===S.backdrop));});
   }},
+  {en:"Render",zh:"渲染",ja:"レンダー",ko:"렌더",build:function(){
+    RENDER_MODES.forEach(function(r,i){rowEl.appendChild(chip(nameOf(r),r.ko,function(){
+      if(S.render===i)return;
+      const first=i===1&&!FX.assetsReady;
+      function go(){
+        S.render=i;applyRenderMode();paint();
+        if(i===1&&!first) toast(T("focusHint"));
+      }
+      // the first switch builds the maps and compiles every realistic
+      // program, which stalls for a moment: say so before it happens
+      if(first){toast(T("compiling"),2600);setTimeout(function(){go();setTimeout(function(){toast(T("focusHint"));},900);},60);}
+      else go();
+    },i===S.render));});
+    rowEl.appendChild(chip(T("freeZoom"),"자유 줌",function(){setFreeZoom(!S.freeZoom);paint();},S.freeZoom));
+    if(S.render!==1)return;
+    if(POST.hasDepth) rowEl.appendChild(chip(T("dof"),"심도",function(){S.dof=!S.dof;paint();},S.dof));
+    rowEl.appendChild(chip(T("bloom"),"블룸",function(){S.bloom=!S.bloom;paint();},S.bloom));
+    // f-number on a log scale, like the stops on a real aperture ring
+    if(POST.hasDepth&&S.dof)
+      slider(Math.log2(1.4),Math.log2(22),Math.log2(S.fstop),function(v){return "f/"+(+Math.pow(2,v).toFixed(1));},
+        function(v){S.fstop=Math.pow(2,v);},{label:T("aperture"),ko:"조리개",aria:T("aperture")});
+    slider(0,1,S.wet,function(v){return Math.round(v*100)+"%";},
+      function(v){S.wet=v;FXU.fxWet.value=v;},{row:row3El,label:T("wetness"),ko:"젖음",aria:T("wetness")});
+  }},
 ];
 let tabI=1;
 const tabBtns=TABS.map(function(t,i){
@@ -1980,7 +2721,7 @@ function nudge(){
 /* capture */
 const flash=document.getElementById("flash");
 document.getElementById("shutter").addEventListener("click",function(){
-  renderer.render(scene,camera);
+  renderFrame(0,performance.now()/1000);
   const src=renderer.domElement;
   const W=1080,H=Math.round(W*src.height/src.width);
   const out=document.createElement("canvas");out.width=W;out.height=H+92;
@@ -2000,6 +2741,271 @@ document.getElementById("shutter").addEventListener("click",function(){
 });
 
 /* ===================================================================
+   POST (Realistic mode)
+   scene -> HDR target (4x MSAA, linear half-float, depth texture)
+         -> depth of field: CoC from a lens model of the camera, half-res
+            bokeh gather with separate near/far fields (the Unity PPv2 method),
+            recombined at full res against full-res CoC so in-focus edges
+            stay sharp
+         -> bloom: energy-conserving mip chain (Jimenez 2014), no threshold;
+            only what's actually bright enough glows. Karis-weighted first
+            downsample keeps single-pixel specular sparkles from flickering.
+         -> lateral chromatic aberration, cos^4 optical vignetting,
+            exposure, AgX tone mapping, film grain, dither
+   =================================================================== */
+const POST=(function(){
+  const gl2=renderer.capabilities.isWebGL2;
+  const floatOK=gl2?renderer.extensions.has("EXT_color_buffer_float"):
+    (renderer.extensions.has("OES_texture_half_float")&&renderer.extensions.has("EXT_color_buffer_half_float"));
+  const TYPE=floatOK?THREE.HalfFloatType:THREE.UnsignedByteType;
+  const depthOK=gl2||renderer.extensions.has("WEBGL_depth_texture");
+  const coarse=matchMedia("(pointer:coarse)").matches;
+  function target(opt){
+    const t=new THREE.WebGLRenderTarget(1,1,Object.assign({type:TYPE,format:THREE.RGBAFormat,
+      minFilter:THREE.LinearFilter,magFilter:THREE.LinearFilter,depthBuffer:false,stencilBuffer:false},opt||{}));
+    t.texture.generateMipmaps=false;return t;
+  }
+  const sceneRT=gl2?new THREE.WebGLMultisampleRenderTarget(1,1,{type:TYPE,format:THREE.RGBAFormat,
+    minFilter:THREE.LinearFilter,magFilter:THREE.LinearFilter,depthBuffer:true,stencilBuffer:false})
+    :target({depthBuffer:true});
+  if(gl2) sceneRT.samples=4;
+  sceneRT.texture.generateMipmaps=false;
+  function newDepth(w,h){
+    // UnsignedInt so the MSAA depth renderbuffer (DEPTH24) and this texture
+    // match; blitFramebuffer silently fails on mismatched depth formats
+    const d=new THREE.DepthTexture(w,h,THREE.UnsignedIntType);
+    d.minFilter=d.magFilter=THREE.NearestFilter;return d;
+  }
+  if(depthOK) sceneRT.depthTexture=newDepth(1,1);
+  const hdrRT=target(), dofA=target(), dofB=target();
+  const MIPS=6, mips=[];for(let i=0;i<MIPS;i++) mips.push(target());
+
+  const fsCam=new THREE.OrthographicCamera(-1,1,1,-1,0,1),fsScene=new THREE.Scene();
+  const fsGeo=new THREE.BufferGeometry();
+  fsGeo.setAttribute("position",new THREE.Float32BufferAttribute([-1,-1,0,3,-1,0,-1,3,0],3));
+  fsGeo.setAttribute("uv",new THREE.Float32BufferAttribute([0,0,2,0,0,2],2));
+  const fsMesh=new THREE.Mesh(fsGeo);fsMesh.frustumCulled=false;fsScene.add(fsMesh);
+  const VS="varying vec2 vUv;\nvoid main(){vUv=uv;gl_Position=vec4(position.xy,0.,1.);}";
+  function mat(frag,uniforms,defines,blend){
+    return new THREE.ShaderMaterial({vertexShader:VS,fragmentShader:frag,uniforms:uniforms,defines:defines||{},
+      depthTest:false,depthWrite:false,
+      blending:blend?THREE.CustomBlending:THREE.NoBlending,
+      blendSrc:THREE.OneFactor,blendDst:THREE.OneFactor,blendEquation:THREE.AddEquation});
+  }
+  function run(m,rt,clear){
+    fsMesh.material=m;renderer.setRenderTarget(rt);
+    if(clear!==false) renderer.clear(true,false,false);
+    renderer.render(fsScene,fsCam);
+  }
+
+  /* ---- depth of field ---- */
+  // Camera modelled as a 24 mm-tall sensor behind a lens whose focal
+  // length matches the scene's 30 degree vertical FOV (~45 mm): the
+  // "normal lens" look of a real product shot. 1 world unit = 100 mm.
+  const SENSOR_H=24, UNIT_MM=100;
+  const lensU={value:new THREE.Vector4()};   // focus mm, magnification, aperture diameter mm, 1/sensor mm
+  const clipU={value:new THREE.Vector2(.1,100)};
+  const maxCoCU={value:.035};                // max blur radius, fraction of image height
+  const COC=[
+    "uniform sampler2D tDepth;uniform vec4 lens;uniform vec2 clip;uniform float maxCoC;",
+    "float cocAt(vec2 uv){",
+    "  float d=texture2D(tDepth,uv).x;",
+    "  float S2=clip.x*clip.y/(clip.y-(clip.y-clip.x)*d)*"+UNIT_MM.toFixed(1)+";",
+    // blur circle diameter on the sensor, signed (+ behind focus):
+    // aperture * magnification * relative defocus. Same as the thin-lens
+    // A*f*(S2-S1)/(S2*(S1-f)) at normal distances, but magnification comes
+    // from the fixed field of view, so it stays valid in macro range where
+    // the focus distance drops below the focal length
+    "  float c=lens.z*lens.y*(S2-lens.x)/S2;",
+    "  return clamp(.5*c*lens.w,-maxCoC,maxCoC);",
+    "}"].join("\n");
+  const cocUniforms=function(){return {tDepth:{value:null},lens:lensU,clip:clipU,maxCoC:maxCoCU};};
+  const prefilter=mat([
+    "uniform sampler2D tColor;uniform vec2 texel;varying vec2 vUv;",COC,
+    "float mx(vec3 c){return max(c.r,max(c.g,c.b));}",
+    "void main(){",
+    "  vec3 d=vec3(texel,0.)*vec3(.5,.5,-.5);",
+    "  vec2 u0=vUv-d.xy,u1=vUv-d.zy,u2=vUv+d.zy,u3=vUv+d.xy;",
+    "  vec3 c0=texture2D(tColor,u0).rgb,c1=texture2D(tColor,u1).rgb,c2=texture2D(tColor,u2).rgb,c3=texture2D(tColor,u3).rgb;",
+    "  float k0=cocAt(u0),k1=cocAt(u1),k2=cocAt(u2),k3=cocAt(u3);",
+    // luma + CoC weighting keeps sharp bright pixels from bleeding and flickering
+    "  float w0=abs(k0)/(mx(c0)+1.),w1=abs(k1)/(mx(c1)+1.),w2=abs(k2)/(mx(c2)+1.),w3=abs(k3)/(mx(c3)+1.);",
+    "  vec3 avg=(c0*w0+c1*w1+c2*w2+c3*w3)/max(w0+w1+w2+w3,1e-4);",
+    "  float kmin=min(min(k0,k1),min(k2,k3)),kmax=max(max(k0,k1),max(k2,k3));",
+    "  float coc=-kmin>kmax?kmin:kmax;",
+    "  avg*=smoothstep(0.,texel.y*2.,abs(coc));",
+    "  gl_FragColor=vec4(avg,coc);",
+    "}"].join("\n"),Object.assign(cocUniforms(),{tColor:{value:null},texel:{value:new THREE.Vector2()}}));
+  // Disk kernel in concentric rings (1+7+14+21+28 = 71 taps; 43 on phones),
+  // warped to a 7-blade aperture with rounded blades so out-of-focus
+  // highlights read as lens bokeh rather than perfect CG circles.
+  function diskKernel(rings){
+    const out=[new THREE.Vector2(0,0)],blades=7,rot=.3;
+    for(let r=1;r<=rings;r++){const n=r*7;
+      for(let j=0;j<n;j++){const a=(j+(r&1)*.5)/n*Math.PI*2,rad=r/rings;
+        const seg=Math.PI*2/blades,t=((a-rot)%seg+seg)%seg-seg/2;
+        const poly=Math.cos(Math.PI/blades)/Math.cos(t);
+        const k=rad*MU.lerp(1,poly,.6);
+        out.push(new THREE.Vector2(Math.cos(a)*k,Math.sin(a)*k));}}
+    return out;
+  }
+  const kernel=diskKernel(coarse?3:4);
+  const bokeh=mat([
+    "uniform sampler2D tSrc;uniform vec2 kernel[KN];uniform float maxCoC;uniform float aspect;uniform vec2 texel;varying vec2 vUv;",
+    "void main(){",
+    "  vec4 s0=texture2D(tSrc,vUv);",
+    "  vec4 bg=vec4(0.),fg=vec4(0.);",
+    "  float margin=texel.y*2.;",
+    "  for(int i=0;i<KN;i++){",
+    "    vec2 disp=kernel[i]*maxCoC;float dist=length(disp);",
+    "    vec4 s=texture2D(tSrc,vUv+vec2(disp.x/aspect,disp.y));",
+    // far field: a sample only spreads onto this pixel as far as the
+    // SMALLER of the two blur radii allows, so blurred background never
+    // smears over a sharper subject in front of it
+    "    float bw=clamp((max(min(s0.a,s.a),0.)-dist+margin)/margin,0.,1.);",
+    // near field spreads freely: out-of-focus foreground covers what's behind
+    "    float fw=clamp((-s.a-dist+margin)/margin,0.,1.)*step(texel.y,-s.a);",
+    "    bg+=vec4(s.rgb,1.)*bw;fg+=vec4(s.rgb,1.)*fw;",
+    "  }",
+    "  bg.rgb/=bg.a+(bg.a==0.?1.:0.);fg.rgb/=fg.a+(fg.a==0.?1.:0.);",
+    "  float alpha=clamp(fg.a*3.14159265/float(KN),0.,1.);",
+    "  gl_FragColor=vec4(mix(bg.rgb,fg.rgb,alpha),alpha);",
+    "}"].join("\n"),{tSrc:{value:null},kernel:{value:kernel},maxCoC:maxCoCU,aspect:{value:1},
+      texel:{value:new THREE.Vector2()}},{KN:kernel.length});
+  const tent=mat([
+    "uniform sampler2D tSrc;uniform vec2 texel;varying vec2 vUv;",
+    "void main(){vec4 d=vec4(texel,texel)*vec4(.5,.5,-.5,0.);",
+    "  gl_FragColor=(texture2D(tSrc,vUv-d.xy)+texture2D(tSrc,vUv-d.zy)+texture2D(tSrc,vUv+d.zy)+texture2D(tSrc,vUv+d.xy))*.25;}"
+    ].join("\n"),{tSrc:{value:null},texel:{value:new THREE.Vector2()}});
+  const dofMerge=mat([
+    "uniform sampler2D tColor;uniform sampler2D tDof;uniform vec2 texel;varying vec2 vUv;",COC,
+    "void main(){",
+    "  vec4 dof=texture2D(tDof,vUv);",
+    "  float ffa=smoothstep(texel.y*2.,texel.y*4.,cocAt(vUv));",
+    "  vec4 c=texture2D(tColor,vUv);",
+    "  gl_FragColor=vec4(mix(c.rgb,dof.rgb,ffa+dof.a-ffa*dof.a),1.);",
+    "}"].join("\n"),Object.assign(cocUniforms(),{tColor:{value:null},tDof:{value:null},texel:{value:new THREE.Vector2()}}));
+
+  /* ---- bloom ---- */
+  const down=mat([
+    "uniform sampler2D tSrc;uniform vec2 texel;uniform float karis;varying vec2 vUv;",
+    "vec3 t(float x,float y){return min(texture2D(tSrc,vUv+vec2(x,y)*texel).rgb,vec3(1e4));}",
+    "float w(vec3 c){return 1./(1.+dot(c,vec3(.2126,.7152,.0722)));}",
+    "void main(){",
+    "  vec3 a=t(-2.,2.),b=t(0.,2.),c=t(2.,2.),d=t(-2.,0.),e=t(0.,0.),f=t(2.,0.),g=t(-2.,-2.),h=t(0.,-2.),i=t(2.,-2.);",
+    "  vec3 j=t(-1.,1.),k=t(1.,1.),l=t(-1.,-1.),m=t(1.,-1.);",
+    "  vec3 g0=(a+b+d+e)*.25,g1=(b+c+e+f)*.25,g2=(d+e+g+h)*.25,g3=(e+f+h+i)*.25,g4=(j+k+l+m)*.25;",
+    "  vec3 o;",
+    "  if(karis>.5){",
+    "    float w0=.125*w(g0),w1=.125*w(g1),w2=.125*w(g2),w3=.125*w(g3),w4=.5*w(g4);",
+    "    o=(g0*w0+g1*w1+g2*w2+g3*w3+g4*w4)/(w0+w1+w2+w3+w4);",
+    "  } else o=(g0+g1+g2+g3)*.125+g4*.5;",
+    "  gl_FragColor=vec4(max(o,0.),1.);",
+    "}"].join("\n"),{tSrc:{value:null},texel:{value:new THREE.Vector2()},karis:{value:0}});
+  const up=mat([
+    "uniform sampler2D tSrc;uniform vec2 texel;varying vec2 vUv;",
+    "vec3 t(float x,float y){return texture2D(tSrc,vUv+vec2(x,y)*texel).rgb;}",
+    "void main(){",
+    "  vec3 s=t(-1.,1.)+t(1.,1.)+t(-1.,-1.)+t(1.,-1.)+(t(0.,1.)+t(-1.,0.)+t(1.,0.)+t(0.,-1.))*2.+t(0.,0.)*4.;",
+    "  gl_FragColor=vec4(s/16.,1.);",
+    "}"].join("\n"),{tSrc:{value:null},texel:{value:new THREE.Vector2()}},{},true);
+
+  /* ---- final ---- */
+  const final=mat([
+    "uniform sampler2D tColor;uniform sampler2D tBloom;uniform float bloom;uniform float exposure;",
+    "uniform float aspect;uniform float tanHalf;uniform float time;uniform float ca;varying vec2 vUv;",
+    // AgX (Sobotka; fitted by Wrensch). Holds hue far better than ACES as
+    // saturated pinks and mints go into highlight.
+    "vec3 agxCurve(vec3 x){vec3 x2=x*x,x4=x2*x2;",
+    "  return 15.5*x4*x2-40.14*x4*x+31.96*x4-6.868*x2*x+.4298*x2+.1191*x-.00232;}",
+    "vec3 agx(vec3 v){",
+    "  const mat3 m=mat3(.842479062253094,.0423282422610123,.0423756549057051,",
+    "    .0784335999999992,.878468636469772,.0784336,.0792237451477643,.0791661274605434,.879142973793104);",
+    "  const mat3 mi=mat3(1.19687900512017,-.0528968517574562,-.0529716355144438,",
+    "    -.0980208811401368,1.15190312990417,-.0980434501171241,-.0990297440797205,-.0989611768448433,1.15107367264116);",
+    "  v=clamp(log2(max(m*v,1e-10)),-12.47393,4.026069);",
+    "  v=agxCurve((v+12.47393)/16.499999);",
+    // a gentle 'punchy' look: product photography sits contrastier than AgX base
+    "  v=pow(max(v,0.),vec3(1.3));",
+    "  float l=dot(v,vec3(.2126,.7152,.0722));v=l+1.18*(v-l);",
+    "  return clamp(mi*v,0.,1.);}",
+    "float hash(vec2 p){p=fract(p*vec2(443.897,441.423));p+=dot(p,p.yx+19.19);return fract((p.x+p.y)*p.x);}",
+    "void main(){",
+    "  vec2 d=vUv-.5;",
+    // lateral CA: red and blue land at slightly different magnifications
+    "  vec3 col=vec3(texture2D(tColor,vUv-d*ca).r,texture2D(tColor,vUv).g,texture2D(tColor,vUv+d*ca).b);",
+    "  col=mix(col,texture2D(tBloom,vUv).rgb*(1./"+MIPS+".),bloom);",
+    // natural vignetting: cos^4 of the field angle
+    "  vec2 p=d*2.*vec2(aspect,1.)*tanHalf;float c2=1./(1.+dot(p,p));",
+    "  col*=mix(1.,c2*c2,.85);",
+    "  col=agx(col*exposure);",
+    // luminance-shaped grain: strongest in the mids, like film
+    "  float l=dot(col,vec3(.2126,.7152,.0722));",
+    "  float n=hash(gl_FragCoord.xy+fract(time*7.31)*97.)-.5;",
+    "  col+=n*.045*(l*(1.-l)*2.+.08);",
+    "  col+=(hash(gl_FragCoord.xy*1.37+time)-hash(gl_FragCoord.xy*.91-time))/255.;",
+    "  gl_FragColor=vec4(col,1.);",
+    "}"].join("\n"),{tColor:{value:null},tBloom:{value:null},bloom:{value:.14},exposure:{value:1},
+      aspect:{value:1},tanHalf:{value:Math.tan(MU.degToRad(15))},time:{value:0},ca:{value:.0035}});
+
+  const size=new THREE.Vector2();
+  function setSize(){
+    renderer.getDrawingBufferSize(size);
+    const w=Math.max(1,size.x),h=Math.max(1,size.y);
+    sceneRT.setSize(w,h);
+    if(depthOK){sceneRT.depthTexture.dispose();sceneRT.depthTexture=newDepth(w,h);}
+    hdrRT.setSize(w,h);
+    const hw=Math.max(1,w>>1),hh=Math.max(1,h>>1);
+    dofA.setSize(hw,hh);dofB.setSize(hw,hh);
+    for(let i=0;i<MIPS;i++) mips[i].setSize(Math.max(1,w>>(i+1)),Math.max(1,h>>(i+1)));
+    prefilter.uniforms.texel.value.set(1/w,1/h);
+    dofMerge.uniforms.texel.value.set(1/w,1/h);
+    bokeh.uniforms.texel.value.set(1/hw,1/hh);tent.uniforms.texel.value.set(1/hw,1/hh);
+    bokeh.uniforms.aspect.value=w/h;final.uniforms.aspect.value=w/h;
+  }
+  const TAN_HALF=Math.tan(MU.degToRad(camera.fov*.5)),FOCAL=SENSOR_H*.5/TAN_HALF;
+  function render(focusDist,t){
+    const lens=lensU.value,S1=Math.max(focusDist*UNIT_MM,1);
+    lens.set(S1,SENSOR_H/(2*S1*TAN_HALF),FOCAL/S.fstop,1/SENSOR_H);
+    clipU.value.set(camera.near,camera.far);
+    const autoClear=renderer.autoClear;
+    renderer.setRenderTarget(sceneRT);renderer.clear();renderer.render(scene,camera);
+    renderer.autoClear=false;
+    let src=sceneRT.texture;
+    if(S.dof&&depthOK){
+      prefilter.uniforms.tColor.value=src;prefilter.uniforms.tDepth.value=sceneRT.depthTexture;
+      run(prefilter,dofA);
+      bokeh.uniforms.tSrc.value=dofA.texture;run(bokeh,dofB);
+      tent.uniforms.tSrc.value=dofB.texture;run(tent,dofA);
+      dofMerge.uniforms.tColor.value=src;dofMerge.uniforms.tDof.value=dofA.texture;
+      dofMerge.uniforms.tDepth.value=sceneRT.depthTexture;
+      run(dofMerge,hdrRT);src=hdrRT.texture;
+    }
+    if(S.bloom){
+      let prev=src,pw=size.x,ph=size.y;
+      for(let i=0;i<MIPS;i++){
+        down.uniforms.tSrc.value=prev;down.uniforms.texel.value.set(1/pw,1/ph);
+        down.uniforms.karis.value=i===0?1:0;run(down,mips[i]);
+        prev=mips[i].texture;pw=mips[i].width;ph=mips[i].height;
+      }
+      // walk back up, adding each blurrier level into the next sharper one
+      for(let i=MIPS-1;i>0;i--){
+        up.uniforms.tSrc.value=mips[i].texture;
+        up.uniforms.texel.value.set(1/mips[i].width,1/mips[i].height);
+        run(up,mips[i-1],false);
+      }
+    }
+    final.uniforms.tColor.value=src;
+    final.uniforms.tBloom.value=mips[0].texture;
+    final.uniforms.bloom.value=S.bloom?.14:0;
+    final.uniforms.time.value=t;
+    run(final,null);
+    renderer.autoClear=autoClear;
+  }
+  return {setSize:setSize,render:render,hasDepth:depthOK,final:final};
+})();
+
+/* ===================================================================
    BOOT + LOOP
    =================================================================== */
 // Camera sits slightly high and aims below centre, so the phone crops off
@@ -2008,8 +3014,20 @@ const VIEW_Y=.30, VIEW_LOOK_Y=-.16;
 function resize(){
   const w=innerWidth,h=innerHeight;
   renderer.setSize(w,h,false);camera.aspect=w/h;
-  camera.position.set(0,VIEW_Y,0);setZoom(zoom);
-  camera.updateProjectionMatrix();camera.lookAt(0,VIEW_LOOK_Y,0);
+  camera.updateProjectionMatrix();
+  // The view direction always comes from the home framing; free zoom only
+  // ever translates the camera, so resizing mid-closeup keeps the closeup.
+  const keep=camera.position.clone();
+  camera.position.set(0,VIEW_Y,homeZ(zoom));camera.lookAt(0,VIEW_LOOK_Y,0);
+  setZoom(zoom);
+  camera.position.copy(camReady?keep:camGoal);camReady=true;
+  POST.setSize();
+}
+function renderFrame(dt,t){
+  scene.traverse(fxSync);
+  updateFocus(dt);
+  if(FX.on) POST.render(focus.dist,t);
+  else renderer.render(scene,camera);
 }
 addEventListener("resize",resize);resize();
 applyCase();applyBackdropStyle();applyBackground();buildPendant();buildStrand();redrawArt();applyLook();paint();
@@ -2066,7 +3084,7 @@ function frame(now){
   }
   if(!dragging()&&!intro) phoneTarget.y=phoneTarget.y*0.98+(0.04+Math.sin(t*0.9)*0.020)*0.02;
 
-  if(dt<=0){renderer.render(scene,camera);return;}
+  if(dt<=0){renderFrame(0,t);return;}
 
   prevPhonePos.copy(phone.position);prevPhoneQ.copy(phone.quaternion);
   phone.position.lerp(phoneTarget,1-Math.pow(0.0008,dt));
@@ -2074,6 +3092,12 @@ function frame(now){
   if(S.tilt&&tiltReady)wantQ.copy(tiltQuat);
   else wantQ.copy(dragQ).multiply(baseQuat);
   phone.quaternion.slerp(wantQ,1-Math.pow(0.00004,dt));
+
+  camera.position.lerp(camGoal,1-Math.pow(.00002,dt));
+  // Pull the near plane in as the camera closes in, or a macro shot of a
+  // bead just clips it away. Kept as large as possible for depth precision.
+  const nearWant=MU.clamp((camera.position.z-.7)*.5,.01,.1);
+  if(Math.abs(camera.near-nearWant)>1e-4){camera.near=nearWant;camera.updateProjectionMatrix();}
 
   // substep interpolation targets + kinematic velocities for contact friction
   phPosA.copy(prevPhonePos);phPosB.copy(phone.position);
@@ -2098,7 +3122,7 @@ function frame(now){
     s.scale.setScalar(u.base*(.65+.35*Math.sin(t*u.sp*2.1+u.ph)));
     s.rotation.z=t*.25+u.ph;
   }
-  renderer.render(scene,camera);
+  renderFrame(dt,t);
 }
 function dragging(){return mode!==null;}
 requestAnimationFrame(frame);
