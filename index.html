@@ -230,6 +230,11 @@ const SHAPES=[
   {k:"bunny",   n:"Bunny",   ko:"토끼",  zh:"兔子", ja:"うさぎ",     volFactor:.55,densityMul:1.0},
   {k:"ribbon",  n:"Ribbon",  ko:"리본",  zh:"蝴蝶结",ja:"リボン",    volFactor:.48,densityMul:1.0},
   {k:"pudding", n:"Pudding", ko:"푸딩",  zh:"布丁", ja:"プリン",     volFactor:.68,densityMul:1.0},
+  // strung beads: mostly air inside the bounding box, but glass and pearl
+  // are about twice as dense as acrylic
+  {k:"beadbow",     n:"Pearl Bow",    ko:"진주 리본",   zh:"珍珠蝴蝶结",ja:"パールリボン",  volFactor:.24,densityMul:2.0},
+  {k:"pearlflower", n:"Pearl Bloom",  ko:"진주 꽃",     zh:"珍珠花",    ja:"パールフラワー",volFactor:.24,densityMul:2.0},
+  {k:"crystalflower",n:"Crystal Bloom",ko:"크리스탈 꽃",zh:"水晶花",    ja:"クリスタルフラワー",volFactor:.22,densityMul:2.1},
 ];
 // density in g/cm^3 (real values). restitution/friction are contact properties.
 const MATERIALS=[
@@ -261,6 +266,7 @@ const HOOKS=[
   {n:"Ring",ko:"링",zh:"圆环",ja:"リング",k:"ring"},
   {n:"Heart",ko:"하트",zh:"爱心",ja:"ハート",k:"heart"},
   {n:"Sakura",ko:"벚꽃",zh:"樱花",ja:"桜",k:"sakura"},
+  {n:"Spring",ko:"스프링",zh:"弹簧扣",ja:"スプリング",k:"spring"},
 ];
 // beadMass in kg, per bead. A 6 mm glass pearl is 0.28 g.
 const STRANDS=[
@@ -272,6 +278,8 @@ const STRANDS=[
    seq:["bead","crimp","bead","pearl"]},
   {k:"chain", n:"Chain",  ko:"체인",  zh:"链条",ja:"チェーン",cord:false,beadMass:.00075,bend:0,
    seq:["link"]},
+  {k:"crystal",n:"Crystal",ko:"크리스탈",zh:"水晶",ja:"クリスタル",cord:true,beadMass:.00035,bend:.00050,
+   seq:["seed","seed","bicone","seed","seed","seed"]},
 ];
 /* Footprint each element occupies ALONG the strand. Beads are laid end to end so
    they touch; a link's footprint is deliberately half its geometry so successive
@@ -328,6 +336,8 @@ const ELEM={
   flower:{len:.0270},
   bead:  {len:.0345},
   crimp: {len:.0120},
+  seed:  {len:.0105},
+  bicone:{len:.0350},
 };
 
 /* ---- procedural art ---- */
@@ -556,8 +566,16 @@ const FX_VERT_MAIN=[
   // object space scaled back to world units: the maps stay glued to a
   // swinging charm (no swimming) but keep a real-world texel size even on
   // meshes built from unit geometry and scaled down (pearls, beads)
-  "\tvFxPos = transformed * vec3( length( modelMatrix[ 0 ].xyz ), length( modelMatrix[ 1 ].xyz ), length( modelMatrix[ 2 ].xyz ) ) + fxSeed;",
-  "\tvFxNrm = objectNormal;",
+  // instanced beads: fold each instance's own transform in, so every bead
+  // gets its own patch of the maps at its real size, oriented with it
+  "\t#ifdef USE_INSTANCING",
+  "\t\tvec3 fxLocal = ( instanceMatrix * vec4( transformed, 1.0 ) ).xyz;",
+  "\t\tvFxNrm = mat3( instanceMatrix ) * objectNormal;",
+  "\t#else",
+  "\t\tvec3 fxLocal = transformed;",
+  "\t\tvFxNrm = objectNormal;",
+  "\t#endif",
+  "\tvFxPos = fxLocal * vec3( length( modelMatrix[ 0 ].xyz ), length( modelMatrix[ 1 ].xyz ), length( modelMatrix[ 2 ].xyz ) ) + fxSeed;",
   "\tvFxN2V = normalMatrix;",
   "#endif"].join("\n");
 const FX_FRAG_PARS=[
@@ -1599,16 +1617,44 @@ let hookShackle=null;
 const hookMaterial=matSilver.clone();
 const attachmentLocal=new V3().copy(HOOK_DEFAULT);
 const ANCHOR_LOCAL=new V3().copy(attachmentLocal);
+// Where the strand's clasp hangs, relative to the hook's attachment point:
+// the bottom of the ring that stands off the hook (the shackle, or the spring
+// O-ring), NOT the flat piece glued to the phone. Anchoring at the flat piece
+// made the strand appear to come out from behind it.
+const HOOK_ANCHOR=new V3();
 function updateAttachment(){
   if(!loop)return;
   loop.position.copy(attachmentLocal);
   hookShackle.position.copy(attachmentLocal);
-  ANCHOR_LOCAL.copy(attachmentLocal);
+  ANCHOR_LOCAL.copy(attachmentLocal).add(HOOK_ANCHOR);
 }
+const matSeam=new THREE.MeshStandardMaterial({color:0x2A2A30,roughness:.5,metalness:.6});
 function buildHook(){
   if(loop)phone.remove(loop);
   if(hookShackle)phone.remove(hookShackle);
   const kind=HOOKS[S.hook].k;
+  if(kind==="spring"){
+    // polished grip disc on the phone, with a spring-gate O-ring hanging
+    // from it (standing out from the back, like a real ring grip)
+    loop=new THREE.Mesh(new THREE.CylinderGeometry(.062,.062,.010,48),hookMaterial);
+    loop.rotation.x=Math.PI/2;loop.castShadow=true;
+    const R=.052,cy=-.048,cz=-.034;
+    const ringGeo=new THREE.TorusGeometry(R,.0095,14,64);
+    ringGeo.rotateY(Math.PI/2);ringGeo.translate(0,cy,cz);
+    hookShackle=new THREE.Mesh(ringGeo,hookMaterial);hookShackle.castShadow=true;
+    // the sprung gate section: two seam lines around the wire, and the
+    // release nub between them
+    [.55,1.25].forEach(function(a){
+      const seam=new THREE.Mesh(new THREE.TorusGeometry(.0098,.0014,6,20),matSeam);
+      seam.position.set(0,cy+Math.sin(a)*R,cz+Math.cos(a)*R);
+      seam.quaternion.setFromUnitVectors(new V3(0,0,1),new V3(0,Math.cos(a),-Math.sin(a)));
+      hookShackle.add(seam);});
+    const nub=new THREE.Mesh(new THREE.SphereGeometry(.0055,10,8),hookMaterial);
+    nub.position.set(0,cy+Math.sin(.9)*(R+.009),cz+Math.cos(.9)*(R+.009));hookShackle.add(nub);
+    HOOK_ANCHOR.set(0,cy-R,cz);
+    phone.add(loop);phone.add(hookShackle);updateAttachment();
+    return;
+  }
   if(kind==="heart") loop=new THREE.Mesh(extrude(heartShape(.11),.030,.009,20),hookMaterial);
   else if(kind==="sakura") loop=new THREE.Mesh(extrude(sakuraShape(.105,5),.030,.009,20),hookMaterial);
   else loop=new THREE.Mesh(new THREE.TorusGeometry(.044,.014,10,26),hookMaterial);
@@ -1620,6 +1666,7 @@ function buildHook(){
   ],true);
   hookShackle=new THREE.Mesh(new THREE.TubeGeometry(hookPath,24,.012,8,true),hookMaterial);
   hookShackle.castShadow=true;
+  HOOK_ANCHOR.set(0,-.060,-.045);   // the shackle's lowest point
   phone.add(loop);updateAttachment();
   phone.add(hookShackle);
 }
@@ -1681,12 +1728,141 @@ let pendantParts=[];
 let followColorMats=[];
 function clearPendant(){
   pendantParts.forEach(function(m){charmBody.remove(m);
-    if(m.userData.own&&m.geometry)m.geometry.dispose();});
+    if(m.userData.own&&m.geometry)m.geometry.dispose();
+    if(m.userData.instanced)m.dispose();});
   pendantParts=[];
   followColorMats=[];
 }
 function addPart(m,own){m.userData.own=!!own;m.castShadow=true;
   charmBody.add(m);pendantParts.push(m);return m;}
+
+/* ===================================================================
+   BEADED CHARMS
+   Built the way they're made: beads strung end to end along the thread path
+   of each loop, petal and tail (spacing = each bead's own length along the
+   thread), each turned to follow the thread. One InstancedMesh per bead
+   type keeps a 150-bead flower to a handful of draw calls.
+   =================================================================== */
+// Faceted crystal. Flat shading makes each facet flash; a lead-crystal index
+// (~1.8, facets reflect ~8%) plus a faint cool body tint and real refraction
+// keeps a 3 mm clear bead visible -- with plain glass values they vanished
+// against the white case, and at ~2.0 they turned hematite-black.
+const matCrystal=fxProfile(new THREE.MeshPhysicalMaterial({color:0xFFFFFF,roughness:0,metalness:0,
+  transmission:1,thickness:.008,ior:1.8,attenuationColor:new THREE.Color(0xDDE5FF),attenuationDistance:.06,
+  flatShading:true,envMapIntensity:2.6,transparent:false,depthWrite:true}),{smudge:.02});
+const matGold=fxProfile(new THREE.MeshPhysicalMaterial({color:0xE9C27A,roughness:.14,metalness:1,
+  clearcoat:.6,clearcoatRoughness:.05,envMapIntensity:2.4}),{metal:1,scratch:.1});
+// seed bead: a squat donut with its hole along the thread (Y)
+const SEED_GEO=(function(){const g=new THREE.TorusGeometry(.58,.42,10,18);g.rotateX(Math.PI/2);return g;})();
+// bicone: two 8-facet cones base to base
+const BICONE_GEO=new THREE.LatheGeometry([new THREE.Vector2(.001,-1),new THREE.Vector2(1,0),new THREE.Vector2(.001,1)],8);
+// Rice pearl: a superellipsoid, blunt-ended rather than pointed. A plain
+// stretched sphere tapers to a point, so even touching end to end a loop of
+// them reads as a dotted line with big gaps; real rice pearls are barrels.
+function riceGeometry(){
+  const g=new THREE.SphereGeometry(1,22,16),p=g.attributes.position;
+  for(let i=0;i<p.count;i++){
+    const x=p.getX(i),y=p.getY(i),z=p.getZ(i),r=Math.hypot(x,z);
+    const want=Math.pow(Math.max(0,1-Math.pow(Math.abs(y),2.6)),1/2.6);
+    const k=r>1e-6?want/r:0;p.setXYZ(i,x*k,y*1.8,z*k);
+  }
+  g.computeVertexNormals();return g;
+}
+// r: bead radius (world units, 1 = 10 cm); len: footprint along the thread;
+// jit: size variation -- rice and seed pearls are never quite uniform
+const BEAD={
+  rice:  {geo:riceGeometry(), mat:matPearl,  r:.017, len:.0625,jit:.12},
+  seedP: {geo:SEED_GEO,  mat:matPearl,  r:.012, len:.0105,jit:.10},
+  seedS: {geo:SEED_GEO,  mat:matSilver, r:.011, len:.0095,jit:.05},
+  seedG: {geo:SEED_GEO,  mat:matGold,   r:.011, len:.0095,jit:.05},
+  bicone:{geo:BICONE_GEO,mat:matCrystal,r:.017, len:.035, jit:.04},
+  pearl: {geo:new THREE.SphereGeometry(1,24,16),mat:matPearl,r:.024,len:.048,jit:.04},
+};
+// Lay beads along a curve in the order `seq` repeats, then spread them so the
+// run exactly fills the curve. A closed loop rounds to the nearest whole
+// bead count (squeezing a hair if needed), because a real loop is pulled
+// tight bead-to-bead; an open run never overlaps.
+function strung(curve,seq,out,closed){
+  const L=curve.getLength(),kinds=[];let sum=0;
+  for(let i=0;;i++){const k=seq[i%seq.length],l=BEAD[k].len;
+    if(sum+l>L+(closed?l*.5:1e-6))break;kinds.push(k);sum+=l;}
+  const f=L/Math.max(sum,1e-6);let d=0;
+  kinds.forEach(function(k){
+    const u=Math.min((d+BEAD[k].len*.5*f)/L,1);d+=BEAD[k].len*f;
+    out.push({k:k,p:curve.getPointAt(u),t:curve.getTangentAt(u).normalize()});});
+}
+// A petal or bow loop leaving the centre `c` at angle `ang`: pinched where the
+// thread leaves the knot, round at the tip, cupped forward by `cup`.
+function loopCurve(c,ang,len,wid,cup){
+  const pts=[],ca=Math.cos(ang),sa=Math.sin(ang);
+  for(let i=0;i<28;i++){
+    const th=i/28*Math.PI*2,u=(1-Math.cos(th))/2,x=u*len,y=Math.sin(th)*wid*.5;
+    pts.push(new V3(c.x+x*ca-y*sa,c.y+x*sa+y*ca,c.z+cup*Math.sin(Math.PI*u)));
+  }
+  return new THREE.CatmullRomCurve3(pts,true,"centripetal");
+}
+function tailCurve(c,ang,len,bend){
+  const d=new V3(Math.cos(ang),Math.sin(ang),0),n=new V3(-d.y,d.x,0);
+  return new THREE.CatmullRomCurve3([c.clone(),
+    c.clone().addScaledVector(d,len*.45).addScaledVector(n,bend),c.clone().addScaledVector(d,len)]);
+}
+function circleCurve(c,r){
+  const pts=[];for(let i=0;i<16;i++){const a=i/16*Math.PI*2;pts.push(new V3(c.x+Math.cos(a)*r,c.y+Math.sin(a)*r,c.z));}
+  return new THREE.CatmullRomCurve3(pts,true);
+}
+// a tight knot of beads: the gathered centre every bow and flower has
+function cluster(c,r,n,seq,out,seed){
+  for(let i=0;i<n;i++){
+    const a=rand1(seed+i*1.7)*6.2832,z=rand1(seed+i*2.9)*2-1,s=Math.sqrt(1-z*z),rr=r*(.6+.4*rand1(seed+i*4.1));
+    const t=new V3(rand1(seed+i*5.3)-.5,rand1(seed+i*6.7)-.5,rand1(seed+i*8.9)-.5).normalize();
+    out.push({k:seq[i%seq.length],p:new V3(c.x+Math.cos(a)*s*rr,c.y+Math.sin(a)*s*rr*.85,c.z+z*rr*.7),t:t});
+  }
+}
+const _bq=new Q(),_bq2=new Q(),_bm=new THREE.Matrix4(),_bs=new V3(),_bUp=new V3(0,1,0);
+function placeBeads(items){
+  const by={};
+  items.forEach(function(b){(by[b.k]=by[b.k]||[]).push(b);});
+  Object.keys(by).forEach(function(k){
+    const B=BEAD[k],arr=by[k],m=new THREE.InstancedMesh(B.geo,B.mat,arr.length);
+    arr.forEach(function(b,i){
+      const s=B.r*(1+(rand1(i*7.31+b.p.x*97.1)-.5)*2*B.jit);
+      // follow the thread, with a random roll about it (bicone facets, pearl lustre)
+      _bq.setFromUnitVectors(_bUp,b.t).multiply(_bq2.setFromAxisAngle(_bUp,rand1(i*3.17+k.length)*6.2832));
+      _bm.compose(b.p,_bq,_bs.set(s,s,s));m.setMatrixAt(i,_bm);});
+    m.instanceMatrix.needsUpdate=true;
+    // instanced bounds are just the base geometry at the origin; never cull
+    m.frustumCulled=false;m.userData.instanced=true;
+    addPart(m,false);
+  });
+}
+// the drop from the charm's jump ring down to the body of the charm
+const STEM_TOP=new V3(0,CH.h/2+.034-.052,0);
+function buildBeaded(k){
+  const out=[];
+  if(k==="beadbow"){
+    const K=new V3(0,.10,0);
+    strung(new THREE.LineCurve3(STEM_TOP,new V3(0,K.y+.035,0)),["seedS","seedS","bicone"],out);
+    [-1,1].forEach(function(s){
+      const up=s<0?Math.PI-.42:.42;
+      strung(loopCurve(K,up,.20,.13,.02),["rice"],out,true);            // outer pearl loop
+      strung(loopCurve(K,up+s*.08,.13,.065,.035),["seedG"],out,true);   // gold inner loop
+      strung(tailCurve(K,-Math.PI/2+s*.42,.21,-s*.03),["rice"],out);
+    });
+    cluster(K,.046,60,["seedS","seedS","bicone","seedS"],out,11);
+  } else {
+    const C=new V3(0,-.02,0),crystal=k==="crystalflower";
+    strung(new THREE.LineCurve3(STEM_TOP,new V3(0,C.y+.05,0)),["seedS","bicone","seedS"],out);
+    // five petals, rotated so the gap between two sits under the stem
+    for(let i=0;i<5;i++){
+      const a=Math.PI/2+Math.PI/5+i*Math.PI*2/5;
+      strung(loopCurve(C,a,crystal?.16:.15,crystal?.10:.085,.025),crystal?["bicone","seedS"]:["seedP"],out,true);
+    }
+    out.push({k:"pearl",p:new V3(C.x,C.y,C.z+.018),t:new V3(0,0,1)});
+    if(crystal) cluster(new V3(C.x,C.y,C.z+.01),.034,30,["seedS","seedS","bicone"],out,23);
+    else strung(circleCurve(new V3(C.x,C.y,C.z+.012),.034),["seedS"],out,true);
+  }
+  placeBeads(out);
+}
 
 function buildPendant(){
   clearPendant();
@@ -1817,6 +1993,8 @@ function buildPendant(){
     // metal band right here for exactly this reason.
     const knot=addPart(new THREE.Mesh(new THREE.SphereGeometry(.046,16,12),matPendantMetal),true);
     knot.scale.set(1.15,.60,.62);knot.position.set(0,.028,.010);knot.renderOrder=3;
+  } else if(k==="beadbow"||k==="pearlflower"||k==="crystalflower"){
+    buildBeaded(k);
   } else if(k==="pudding"){
     const puddingMat=matAcrylic.clone();puddingMat.transmission=.65;
     puddingMat.color.setHex(0xFFD978);puddingMat.attenuationColor.setHex(0xFFD978);
@@ -2297,6 +2475,10 @@ function makeElem(kind,i){
     m=new THREE.Mesh(geoCrimp,matSilver);m.scale.set(.0072,.0115,.0072);
   } else if(kind==="flower"){
     m=new THREE.Mesh(geoFlowerBead,matIrid);
+  } else if(kind==="seed"){
+    m=new THREE.Mesh(BEAD.seedS.geo,matSilver);m.scale.setScalar(BEAD.seedS.r);
+  } else if(kind==="bicone"){
+    m=new THREE.Mesh(BEAD.bicone.geo,matCrystal);m.scale.setScalar(BEAD.bicone.r);
   } else {
     m=new THREE.Mesh(geoLink,matChain);m.scale.x=.58;  // links are oval, not round
   }
